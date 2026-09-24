@@ -41,7 +41,7 @@ Status: Revised following requirements walkthrough with the product owner. Super
 
 ## 3. Performance and collection synchronization
 
-**REQ-015 — Startup target (SHOULD).** WHEN a previously indexed collection is opened, the application SHOULD make it usable within five seconds, measured on the minimum configuration defined in REQ-010. **OPEN:** Define the exact measurement method (start point, end point, definition of "usable").
+**REQ-015 — Startup target (SHOULD).** WHEN a previously indexed collection is opened, the application SHOULD display the collection table, populated from the index, within five seconds. WHILE the collection is still loading, the application SHALL show a loading indication and SHALL NOT prevent the user from using any part of the application that does not require all tracks to be loaded. Measurement: from process launch to the table being displayed with its rows loaded from the index, on the minimum configuration defined in REQ-010, using a 20,000-track collection on SSD with the root reachable; the result is the median of 5 cold launches. Background work (e.g. change detection) MAY continue after that point.
 
 **REQ-016 — Initial scan (SHALL).** IF the collection requires initial indexing, THEN the application SHALL display progress and remain responsive.
 
@@ -63,7 +63,9 @@ Status: Revised following requirements walkthrough with the product owner. Super
 
 **REQ-025 — No implicit file deletion (SHALL).** WHEN the user discards staged changes for a missing or damaged track, the application SHALL NOT delete the underlying audio file.
 
-**OPEN-A:** Define counts and indexing behavior for a temporarily unavailable collection root (e.g. an unplugged USB drive or a disconnected cloud-sync mount).
+**REQ-121 — Unavailable collection root (SHALL).** IF the collection root cannot be reached (e.g. an unplugged USB drive or a disconnected cloud-sync mount), THEN the application SHALL treat the entire collection as unavailable rather than as removed. It SHALL retain the index, staged changes and pending flags; mark all tracks unavailable; disable apply and playback while still permitting editing and staging; NOT count unavailable tracks as missing or pending; and show a persistent, nonblocking notice with a retry action. WHEN the root becomes reachable again, the application SHALL resynchronize automatically (REQ-017) and report only genuine differences through the activity history.
+
+**REQ-122 — Vanished subfolder (SHALL).** IF the collection root is reachable but a subfolder disappears, THEN the application SHALL treat it as an ordinary removal (REQ-017), making its tracks missing (with REQ-024 applying to tracks with staged changes). EXCEPTION (best effort): IF the vanished subfolder was a link or mount point whose target is unreachable, THEN the application SHOULD treat its tracks as unavailable as in REQ-121.
 
 ## 4. Views, filters and pending status
 
@@ -103,7 +105,7 @@ Status: Revised following requirements walkthrough with the product owner. Super
 
 **REQ-043 — Pending column (SHALL).** The pending property SHALL be available as a configurable column and SHALL be hidden by default.
 
-**REQ-044 — Pending counts (SHALL).** WHEN the application starts, it SHALL display at a glance the number of pending tracks and the number of tracks with staged changes, without a blocking dialog. **OPEN-B:** Decide whether missing tracks contribute to the pending count.
+**REQ-044 — Pending counts (SHALL).** WHEN the application starts, it SHALL display at a glance the number of pending tracks and the number of tracks with staged changes, without a blocking dialog. IF any tracks with staged changes are missing, it SHALL also display their count separately; missing tracks SHALL NOT contribute to the pending count.
 
 **REQ-045 — Reveal file location (SHALL).** The application SHALL let the user open the selected track's containing folder in the operating system's file browser through a quick action.
 
@@ -241,7 +243,7 @@ Status: Revised following requirements walkthrough with the product owner. Super
 
 **REQ-105 — Editing during playback (SHALL).** WHEN metadata changes, playback SHALL continue without an interruption caused solely by the tag change.
 
-**REQ-106 — Playback responsiveness (SHOULD).** Explicit playback SHOULD start within one second, measured on the minimum configuration defined in REQ-010.
+**REQ-106 — Playback responsiveness (SHOULD).** Explicit playback SHOULD start within one second. Measurement: from the load action (drag and drop, quick action or shortcut) to first audible output, for a local MP3 and a local WAV on the minimum configuration defined in REQ-010; files on a cloud-sync mount are excluded.
 
 **REQ-107 — Additional player features (COULD).** The player COULD show remaining time, a waveform or support system media keys.
 
@@ -277,12 +279,6 @@ Status: Revised following requirements walkthrough with the product owner. Super
 
 **REQ-120 — Future extensions (COULD).** Later versions COULD support multiple collection roots, manually curated named track lists, custom fields, external metadata providers and waveform display. These are not first-release acceptance criteria.
 
-**OPEN-A:** Define counts and indexing behavior for a temporarily unavailable collection root.
-
-**OPEN-B:** Confirm whether missing tracks contribute to the pending count (REQ-044).
-
 **OPEN-C:** Define supported filesystem assumptions and verification guarantees for safe MP3/WAV writes.
 
 **OPEN-D:** Define the WAV tagging approach for BPM/key given inconsistent RIFF INFO / ID3-in-WAV support across Rekordbox, Serato and Traktor.
-
-**OPEN-E:** Define the exact measurement method for the startup (REQ-015) and playback-start (REQ-106) performance targets.
