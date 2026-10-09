@@ -20,6 +20,10 @@ GitHub flow:
 - Every PR states which requirement IDs it implements or touches.
 - A PR merges only when CI is green on Windows and macOS and the owner has reviewed it.
 
+## Architecture documentation
+- [architecture.md](architecture.md) is kept current: a PR that adds or changes a building block, dependency rule or key concept updates it in the same PR.
+- Significant decisions (technology choices, data formats, safety mechanisms, anything hard to reverse) get an [Architecture Decision Record](adr/) in the PR that makes them. A changed decision gets a new ADR that supersedes the old one.
+
 ## Testing and guardrails
 Each requirement that can be verified automatically gets at least one test tagged with its ID, e.g. `[Trait("Req", "REQ-088")]`. Tests are added in the same PR as the feature.
 
