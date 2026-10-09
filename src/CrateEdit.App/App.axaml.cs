@@ -1,8 +1,9 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using CrateEdit.App.ViewModels;
-using CrateEdit.App.Views;
+using CrateEdit.App.Commands;
+using CrateEdit.Core;
+using CrateEdit.Core.Commands;
 
 namespace CrateEdit.App;
 
@@ -14,7 +15,7 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow { DataContext = new MainWindowViewModel() };
+            desktop.MainWindow = MainWindowFactory.Create(AppPaths.Default, new CommandRegistry(AppCommands.All));
         }
 
         base.OnFrameworkInitializationCompleted();
