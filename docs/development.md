@@ -1,0 +1,59 @@
+# CrateEdit: Development Process
+Draft | 9 October 2026
+
+## Branching
+GitHub flow:
+- `main` is always releasable and only changes through pull requests.
+- Work happens on short-lived branches named `<type>/<short-description>`, e.g. `feat/tag-layer`, `fix/scan-progress`.
+- PRs are squash-merged, so each PR becomes exactly one commit on `main`.
+- No long-lived `develop` or release branches; releases are tags on `main`.
+
+## Commits and changelog
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `test:`, `docs:`, `refactor:`, `perf:`, `build:`, `ci:`, `chore:`. Breaking changes use `!` or a `BREAKING CHANGE:` footer.
+- Because PRs are squash-merged, the **PR title** becomes the commit message on `main`; CI validates that it is a conventional commit.
+- A scope may name the area, e.g. `feat(tags): write BPM and key to WAV`.
+- [release-please](https://github.com/googleapis/release-please) reads the conventional commits on `main`, maintains a release PR with the next version and `CHANGELOG.md`, and creates the GitHub release and tag when that PR is merged.
+- Versioning follows SemVer, starting at `0.x` until the requirements are complete.
+
+## Pull requests
+- One PR per coherent, reviewable slice of a phase (typically several PRs per phase), not one PR per phase.
+- Every PR states which requirement IDs it implements or touches.
+- A PR merges only when CI is green on Windows and macOS and the owner has reviewed it.
+
+## Testing and guardrails
+Each requirement that can be verified automatically gets at least one test tagged with its ID, e.g. `[Trait("Req", "REQ-088")]`. Tests are added in the same PR as the feature.
+
+| Layer | What it covers | Examples |
+|---|---|---|
+| Unit | Core logic without I/O | staging model, undo grouping, retry classification, effective values |
+| Integration | Real files and storage in temp directories | tag read/write round trips, byte-level preservation of audio and foreign frames (GEOB, cues), SQLite index, file watching, crash/fault injection during writes and recovery |
+| Architecture | Structural rules on the code itself | only the apply component may reference the tag writer, so no other code path can write audio files (REQ-052, REQ-075) |
+| End-to-end | The real app UI driven headlessly via Avalonia.Headless | keyboard workflow, staging then apply, no autoplay on selection, prompts and their choices |
+
+Key guardrails and how they are enforced:
+- **No write outside apply** (REQ-052, REQ-075): architecture test plus an integration test that edits, stages and undoes on real files and asserts their bytes are unchanged.
+- **Preserve everything not edited** (REQ-088): byte-level comparison of all non-edited frames and the audio payload after every write test.
+- **Never leave a corrupt file** (REQ-088, REQ-089, REQ-092): fault-injection tests that abort the write at each step and verify the file is either fully old or fully new and that recovery reconciles correctly.
+- **No silent overwrite** (REQ-074): tests that change a file externally between staging and apply and assert it is skipped or flagged.
+- **No automatic transmission** (REQ-117): architecture test that the app has no network-capable dependency in the diagnostics path.
+
+### Test fixtures
+Real DJ-software-tagged files contain copyrighted audio and must not be committed. Fixtures in the repository are generated: short synthetic audio (silence or a tone) carrying tag frames copied from real files (Serato GEOB, Rekordbox/Traktor data), so the frames being protected are real while the audio is not. Original sample files stay outside the repository.
+
+### Requirements traceability
+- CI produces a traceability report listing every requirement ID, the tests tagged with it, and their result.
+- Requirements that cannot be automated (e.g. "Rekordbox reads the written key", performance on the minimum configuration) are listed in `docs/manual-verification.md` with steps, and checked manually.
+- **Phase exit check:** a phase is complete only when every requirement assigned to it in the roadmap is either covered by passing tests or listed and checked in the manual verification list, and the phase's open decisions are recorded in the requirements.
+
+## Continuous integration
+GitHub Actions on every PR and on `main`:
+- build and all test layers on Windows and macOS,
+- PR title check (conventional commit),
+- traceability report as a build artifact.
+
+Release workflow (release-please) builds unsigned packages for Windows and macOS and attaches them to the GitHub release.
+
+## Releases and distribution
+- Releases are published on GitHub Releases, unsigned. Windows SmartScreen and macOS Gatekeeper will warn on first launch; the release notes explain how to open the app anyway.
+- The README and every release state that the software is provided as is and used at your own risk.
+- The first release is planned at the end of Milestone 2 (see [roadmap.md](roadmap.md)).
