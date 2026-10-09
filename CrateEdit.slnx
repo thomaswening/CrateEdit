@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CrateEdit.App/CrateEdit.App.csproj" />
+    <Project Path="src/CrateEdit.Core/CrateEdit.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CrateEdit.Tests/CrateEdit.Tests.csproj" />
+  </Folder>
+</Solution>
