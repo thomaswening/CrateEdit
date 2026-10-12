@@ -101,7 +101,7 @@ static string Single(Dictionary<string, List<string>> options, string name) =>
 
 static List<Requirement> ReadRequirements(string path) =>
     File.ReadLines(path)
-        .Select(line => Regex.Match(line, @"^\*\*(REQ-\d{3}) — (.+?) \(([^)]+)\)\.\*\*"))
+        .Select(line => Regex.Match(line, @"^(?:<a id=""[^""]+""></a>)?\*\*(REQ-\d{3}) — (.+?) \(([^)]+)\)\.\*\*"))
         .Where(match => match.Success)
         .Select(match => new Requirement(match.Groups[1].Value, match.Groups[2].Value, match.Groups[3].Value))
         .OrderBy(r => r.Id, StringComparer.Ordinal)
@@ -109,7 +109,7 @@ static List<Requirement> ReadRequirements(string path) =>
 
 static HashSet<string> ReadManualChecks(string path) =>
     File.ReadLines(path)
-        .Select(line => Regex.Match(line, @"^\|\s*(REQ-\d{3})\s*\|"))
+        .Select(line => Regex.Match(line, @"^\|\s*\[?(REQ-\d{3})\b"))
         .Where(match => match.Success)
         .Select(match => match.Groups[1].Value)
         .ToHashSet();

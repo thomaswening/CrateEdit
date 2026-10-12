@@ -13,10 +13,10 @@ The architecture is driven by these quality goals, in priority order:
 
 | Priority | Quality goal | What it means here | Main requirements |
 |---|---|---|---|
-| 1 | **Data safety** | Audio files are never corrupted, unrelated metadata (cue points, beatgrids, GEOB frames) is never lost, and nothing is overwritten without the user's decision. | REQ-052, REQ-074, REQ-088 to REQ-093 |
-| 2 | **Recoverability** | No user work is lost through crashes, power loss, disconnected drives or cancellation. | REQ-053, REQ-054, REQ-083, REQ-092, REQ-121 |
-| 3 | **Efficient keyboard workflow** | Editing thousands of tracks is fast, with no unnecessary dialogs. | REQ-046 to REQ-049, REQ-058 |
-| 4 | **Responsiveness at scale** | 20,000 tracks load in seconds and the UI never freezes. | REQ-005, REQ-015, REQ-016, REQ-077 |
+| 1 | **Data safety** | Audio files are never corrupted, unrelated metadata (cue points, beatgrids, GEOB frames) is never lost, and nothing is overwritten without the user's decision. | [REQ-052](requirements.md#req-052), [REQ-074](requirements.md#req-074), [REQ-088](requirements.md#req-088) to [REQ-093](requirements.md#req-093) |
+| 2 | **Recoverability** | No user work is lost through crashes, power loss, disconnected drives or cancellation. | [REQ-053](requirements.md#req-053), [REQ-054](requirements.md#req-054), [REQ-083](requirements.md#req-083), [REQ-092](requirements.md#req-092), [REQ-121](requirements.md#req-121) |
+| 3 | **Efficient keyboard workflow** | Editing thousands of tracks is fast, with no unnecessary dialogs. | [REQ-046](requirements.md#req-046) to [REQ-049](requirements.md#req-049), [REQ-058](requirements.md#req-058) |
+| 4 | **Responsiveness at scale** | 20,000 tracks load in seconds and the UI never freezes. | [REQ-005](requirements.md#req-005), [REQ-015](requirements.md#req-015), [REQ-016](requirements.md#req-016), [REQ-077](requirements.md#req-077) |
 | 5 | **Verifiability** | Every guardrail is checked automatically on every change. | [development.md](development.md) |
 
 When goals conflict, the higher one wins. For example, an extra verification read after each write costs speed but is kept for data safety.
@@ -28,7 +28,7 @@ When goals conflict, the higher one wins. For example, an extra verification rea
 - **Developer:** a single maintainer who knows .NET and WPF. Technology choices favor what is familiar and well supported over what is novel.
 - **Storage:** collections can live on internal disks, USB drives or cloud-sync mounts (e.g. Google Drive for desktop). NAS is unsupported. File locking is enforced on Windows but only advisory on macOS.
 - **Distribution:** unsigned releases on GitHub, GPL-3.0 ([ADR-0006](adr/0006-gpl-license.md)).
-- **No network:** CrateEdit has no online features and never transmits data (REQ-117).
+- **No network:** CrateEdit has no online features and never transmits data ([REQ-117](requirements.md#req-117)).
 
 ## 3. Context
 
@@ -98,26 +98,26 @@ flowchart TB
 | Block | Responsibility | Status |
 |---|---|---|
 | **Views / ViewModels** | Avalonia views with Material.Avalonia styling; view models hold UI state and call into Core. Views contain no logic beyond presentation. | Skeleton implemented |
-| **Command and shortcut registry** | Every user action ("mark pending", "apply selected", ...) is defined once as a command; menus, buttons and keyboard shortcuts bind to it. Makes shortcuts configurable (REQ-108) and conflict-checked (REQ-109) in one place. Shortcuts are written platform-independently (`Primary` = Ctrl on Windows, Cmd on macOS). All shortcuts are currently global; per-context shortcuts depend on OPEN-M. | Implemented (registry, key bindings, menu display); settings UI and persistence in Phase 11 |
+| **Command and shortcut registry** | Every user action ("mark pending", "apply selected", ...) is defined once as a command; menus, buttons and keyboard shortcuts bind to it. Makes shortcuts configurable ([REQ-108](requirements.md#req-108)) and conflict-checked ([REQ-109](requirements.md#req-109)) in one place. Shortcuts are written platform-independently (`Primary` = Ctrl on Windows, Cmd on macOS). All shortcuts are currently global; per-context shortcuts depend on [OPEN-M](requirements.md#open-m). | Implemented (registry, key bindings, menu display); settings UI and persistence in Phase 11 |
 | **Collection** | The indexed tracks, their identity, date added, pending status and availability (available, missing, unavailable). | Planned (Phases 2–4) |
-| **Synchronization** | Initial scan, startup reconciliation, runtime file watching, move/rename detection, unavailable-root handling, activity history. | Planned (Phase 3), identity rules depend on OPEN-F |
+| **Synchronization** | Initial scan, startup reconciliation, runtime file watching, move/rename detection, unavailable-root handling, activity history. | Planned (Phase 3), identity rules depend on [OPEN-F](requirements.md#open-f) |
 | **Staging** | Staged edits per track and field, the values seen when staging (for conflict detection), staging timestamps, session undo/redo with grouped actions. | Planned (Phase 5) |
-| **Apply pipeline** | The only component that writes audio files: preflight checks, protection against concurrent modification, recovery material, safe write, verification, retry, cancellation, reconciliation after a crash. | Planned (Phases 6–8), write technique depends on OPEN-C |
-| **Tag access** | ([format guide](formats/id3.md)) Maps the 9 logical fields to MP3 (ID3v2) and WAV tags, reads tags, and performs the low-level tag write on behalf of the apply pipeline. Own frame-level ID3v2 editor: only edited frames are rebuilt, all others are copied as raw bytes, and tags that are not fully understood are refused. | MP3 read/write implemented; WAV depends on OPEN-D ([ADR-0008](adr/0008-own-id3v2-frame-editor.md)) |
+| **Apply pipeline** | The only component that writes audio files: preflight checks, protection against concurrent modification, recovery material, safe write, verification, retry, cancellation, reconciliation after a crash. | Planned (Phases 6–8), write technique depends on [OPEN-C](requirements.md#open-c) |
+| **Tag access** | ([format guide](formats/id3.md)) Maps the 9 logical fields to MP3 (ID3v2) and WAV tags, reads tags, and performs the low-level tag write on behalf of the apply pipeline. Own frame-level ID3v2 editor: only edited frames are rebuilt, all others are copied as raw bytes, and tags that are not fully understood are refused. | MP3 read/write implemented; WAV depends on [OPEN-D](requirements.md#open-d) ([ADR-0008](adr/0008-own-id3v2-frame-editor.md)) |
 | **Local store** | SQLite database in the app data folder for the index, staging, pending flags, view state and recovery bookkeeping. | Planned (Phase 2) |
 | **Diagnostics** | Local daily log files, 30-day retention, home-folder redaction, no transmission. | Implemented |
 
 ### Dependency rules
 - `CrateEdit.App` depends on `CrateEdit.Core`, never the other way round.
 - Only the **apply pipeline** may call the tag writer. Synchronization and the UI may only read tags.
-- Nothing in the product references networking libraries (REQ-117).
+- Nothing in the product references networking libraries ([REQ-117](requirements.md#req-117)).
 
 These rules are enforced by architecture tests in `tests/CrateEdit.Tests/Architecture`, not just by convention. If a block needs a harder boundary later (e.g. to make the tag writer impossible to call from elsewhere), it moves into its own project.
 
 ## 6. Key concepts
 
 ### Track identity
-A track is a **file instance** in the collection, not a piece of music: two copies of the same audio are two tracks (REQ-023). Identity must survive renames and moves (OPEN-F). The planned approach is to recognize a vanished file and a newly appeared file as the same track when size and audio content match, checking content only for candidates whose size matches, so it stays cheap.
+A track is a **file instance** in the collection, not a piece of music: two copies of the same audio are two tracks ([REQ-023](requirements.md#req-023)). Identity must survive renames and moves ([OPEN-F](requirements.md#open-f)). The planned approach is to recognize a vanished file and a newly appeared file as the same track when size and audio content match, checking content only for candidates whose size matches, so it stays cheap.
 
 ### Track state
 A track's availability and editing state are independent:
@@ -125,13 +125,13 @@ A track's availability and editing state are independent:
 | Availability | Meaning |
 |---|---|
 | Available | File present and readable |
-| Missing | Collection reachable, file gone (REQ-024, REQ-122) |
-| Unavailable | Collection root unreachable, e.g. unplugged or disconnected (REQ-121) |
+| Missing | Collection reachable, file gone ([REQ-024](requirements.md#req-024), [REQ-122](requirements.md#req-122)) |
+| Unavailable | Collection root unreachable, e.g. unplugged or disconnected ([REQ-121](requirements.md#req-121)) |
 
-Independently of that, a track may be **pending** (not yet processed by the user), have **staged changes**, have a **conflict**, or be in **unresolved recovery** (editing and playback blocked, REQ-093).
+Independently of that, a track may be **pending** (not yet processed by the user), have **staged changes**, have a **conflict**, or be in **unresolved recovery** (editing and playback blocked, [REQ-093](requirements.md#req-093)).
 
 ### Staged edits and effective values
-A staged edit records, per field, the **new value** and the **on-disk value at the time of staging**. The second value is what makes conflict detection possible: if the file now holds something else, another program changed it. What the table, search and filters show when a staged value exists is still open (OPEN-L); the current proposal is the staged value, visibly marked.
+A staged edit records, per field, the **new value** and the **on-disk value at the time of staging**. The second value is what makes conflict detection possible: if the file now holds something else, another program changed it. What the table, search and filters show when a staged value exists is still open ([OPEN-L](requirements.md#open-l)); the current proposal is the staged value, visibly marked.
 
 ### Apply pipeline
 
@@ -146,9 +146,9 @@ flowchart LR
     verify -->|failed| restore[Restore from<br/>recovery material]
 ```
 
-- **Recovery material** is stored in local app data, not next to the file, so it survives the collection disconnecting mid-write (REQ-013).
-- **Safe write:** the file is either fully old or fully new, never half-written. The exact technique (e.g. write a temporary copy and atomically replace) is decided by the Phase 1 spike (OPEN-C).
-- **Finalize** happens only when the run completes or the user keeps the result after cancelling. Until then, applied tracks can still be reverted (REQ-083).
+- **Recovery material** is stored in local app data, not next to the file, so it survives the collection disconnecting mid-write ([REQ-013](requirements.md#req-013)).
+- **Safe write:** the file is either fully old or fully new, never half-written. The exact technique (e.g. write a temporary copy and atomically replace) is decided by the Phase 1 spike ([OPEN-C](requirements.md#open-c)).
+- **Finalize** happens only when the run completes or the user keeps the result after cancelling. Until then, applied tracks can still be reverted ([REQ-083](requirements.md#req-083)).
 - In the first release, preflight is a simple **stale-value check**: a track whose on-disk values changed since staging is skipped and reported. The full conflict resolution UI follows in Phase 7.
 
 ### Local data
@@ -166,7 +166,7 @@ Everything CrateEdit owns lives in the app data folder (`%LOCALAPPDATA%\CrateEdi
 ## 7. Cross-cutting concepts
 
 - **Logging:** Serilog to local daily files, home directory redacted, no network sinks. Implemented.
-- **Errors:** expected failures are returned as `Result`s with typed errors that carry a stable code. Infrastructure exceptions are converted into such errors at boundaries, and programming errors are not caught. The UI translates error codes into localized messages ([ADR-0009](adr/0009-result-pattern-and-typed-errors.md)). In apply, failures in one track never stop independent tracks (REQ-078); transient failures are retried with a bound, and shared causes (e.g. a disconnected drive) are detected once instead of per track (REQ-079).
+- **Errors:** expected failures are returned as `Result`s with typed errors that carry a stable code. Infrastructure exceptions are converted into such errors at boundaries, and programming errors are not caught. The UI translates error codes into localized messages ([ADR-0009](adr/0009-result-pattern-and-typed-errors.md)). In apply, failures in one track never stop independent tracks ([REQ-078](requirements.md#req-078)); transient failures are retried with a bound, and shared causes (e.g. a disconnected drive) are detected once instead of per track ([REQ-079](requirements.md#req-079)).
 - **Threading:** scanning, synchronization and apply run in the background; the UI thread only renders and handles input. Long operations report progress and remain cancellable.
 - **Localization:** all UI text comes from `.resx` resources in English and German, following the OS display language with English as fallback. Persisted data and logs are language-independent ([ADR-0007](adr/0007-localization-and-text-matching.md)). Implemented.
 - **Text matching:** search ignores case and accents, sorting follows the user's regional conventions, and identity checks treat composed and decomposed Unicode as equal. All comparisons go through `TextMatching` in Core ([ADR-0007](adr/0007-localization-and-text-matching.md)). Implemented.
@@ -191,7 +191,7 @@ Everything CrateEdit owns lives in the app data folder (`%LOCALAPPDATA%\CrateEdi
 | Risk | Mitigation |
 |---|---|
 | A tag write damages proprietary DJ data (cues, beatgrids, GEOB) | Own frame-level editor that copies non-edited frames as raw bytes ([ADR-0008](adr/0008-own-id3v2-frame-editor.md)); byte-level preservation tests on synthetic Serato/Traktor frames and real files; still to be confirmed with files analyzed by Serato or Traktor |
-| WAV tags written in a form DJ software does not read | Phase 1 spike and manual checks in each DJ application (OPEN-D) |
-| Atomic replace behaves differently on cloud-sync mounts | Spike on a real Google Drive mount (OPEN-C) |
-| macOS cannot enforce file locks | Expected; handled by the "protection unavailable" path (REQ-073) and the stale-value check |
+| WAV tags written in a form DJ software does not read | Phase 1 spike and manual checks in each DJ application ([OPEN-D](requirements.md#open-d)) |
+| Atomic replace behaves differently on cloud-sync mounts | Spike on a real Google Drive mount ([OPEN-C](requirements.md#open-c)) |
+| macOS cannot enforce file locks | Expected; handled by the "protection unavailable" path ([REQ-073](requirements.md#req-073)) and the stale-value check |
 | Avalonia grid performance or keyboard handling differs from WPF | Early table work in Phase 2 with 20,000 rows; headless end-to-end tests for keyboard flows |

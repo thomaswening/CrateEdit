@@ -4,7 +4,7 @@
 - **Date:** 2026-10-09
 
 ## Context
-CrateEdit keeps substantial state of its own: the index of up to 20,000 tracks, staged changes, pending flags, date added, view preferences and recovery bookkeeping. Staging must be durable against crashes and power loss (REQ-053), startup from the index must be fast (REQ-015), and this state must survive the collection being disconnected (REQ-013, REQ-121).
+CrateEdit keeps substantial state of its own: the index of up to 20,000 tracks, staged changes, pending flags, date added, view preferences and recovery bookkeeping. Staging must be durable against crashes and power loss ([REQ-053](../requirements.md#req-053)), startup from the index must be fast ([REQ-015](../requirements.md#req-015)), and this state must survive the collection being disconnected ([REQ-013](../requirements.md#req-013), [REQ-121](../requirements.md#req-121)).
 
 ## Decision
 Store all local state in a single **SQLite** database in the app data folder, accessed through Microsoft.Data.Sqlite.
