@@ -98,7 +98,7 @@ flowchart TB
 | Block | Responsibility | Status |
 |---|---|---|
 | **Views / ViewModels** | Avalonia views with Material.Avalonia styling; view models hold UI state and call into Core. Views contain no logic beyond presentation. | Skeleton implemented |
-| **Command and shortcut registry** | Every user action ("mark pending", "apply selected", ...) is defined once as a command; menus, buttons and keyboard shortcuts bind to it. Makes shortcuts configurable (REQ-108) and conflict-checked (REQ-109) in one place. | Planned (Phase 0) |
+| **Command and shortcut registry** | Every user action ("mark pending", "apply selected", ...) is defined once as a command; menus, buttons and keyboard shortcuts bind to it. Makes shortcuts configurable (REQ-108) and conflict-checked (REQ-109) in one place. Shortcuts are written platform-independently (`Primary` = Ctrl on Windows, Cmd on macOS). All shortcuts are currently global; per-context shortcuts depend on OPEN-M. | Implemented (registry, key bindings, menu display); settings UI and persistence in Phase 11 |
 | **Collection** | The indexed tracks, their identity, date added, pending status and availability (available, missing, unavailable). | Planned (Phases 2–4) |
 | **Synchronization** | Initial scan, startup reconciliation, runtime file watching, move/rename detection, unavailable-root handling, activity history. | Planned (Phase 3), identity rules depend on OPEN-F |
 | **Staging** | Staged edits per track and field, the values seen when staging (for conflict detection), staging timestamps, session undo/redo with grouped actions. | Planned (Phase 5) |
