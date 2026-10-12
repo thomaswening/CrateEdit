@@ -168,6 +168,8 @@ Everything CrateEdit owns lives in the app data folder (`%LOCALAPPDATA%\CrateEdi
 - **Logging:** Serilog to local daily files, home directory redacted, no network sinks. Implemented.
 - **Errors:** failures in one track never stop independent tracks (REQ-078); transient failures are retried with a bound, and shared causes (e.g. a disconnected drive) are detected once instead of per track (REQ-079).
 - **Threading:** scanning, synchronization and apply run in the background; the UI thread only renders and handles input. Long operations report progress and remain cancellable.
+- **Localization:** all UI text comes from `.resx` resources in English and German, following the OS display language with English as fallback. Persisted data and logs are language-independent ([ADR-0007](adr/0007-localization-and-text-matching.md)). Implemented.
+- **Text matching:** search ignores case and accents, sorting follows the user's regional conventions, and identity checks treat composed and decomposed Unicode as equal. All comparisons go through `TextMatching` in Core ([ADR-0007](adr/0007-localization-and-text-matching.md)). Implemented.
 - **Testing:** unit, integration, architecture and headless end-to-end tests, tagged with requirement IDs ([development.md](development.md)).
 
 ## 8. Decisions
@@ -180,6 +182,7 @@ Everything CrateEdit owns lives in the app data folder (`%LOCALAPPDATA%\CrateEdi
 | [0004](adr/0004-sqlite-local-state.md) | SQLite in app data for all local state | Proposed |
 | [0005](adr/0005-taglibsharp.md) | TagLib# for tag reading and writing | Proposed, pending Phase 1 spike |
 | [0006](adr/0006-gpl-license.md) | GPL-3.0 license | Accepted |
+| [0007](adr/0007-localization-and-text-matching.md) | Localization with resource files; central text-matching rules | Accepted |
 
 ## 9. Risks
 

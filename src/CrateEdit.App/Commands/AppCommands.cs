@@ -1,3 +1,4 @@
+using CrateEdit.App.Resources;
 using CrateEdit.Core.Commands;
 
 namespace CrateEdit.App.Commands;
@@ -9,6 +10,6 @@ public static class AppCommands
 
     public static IReadOnlyList<CommandDefinition> All { get; } =
     [
-        new(OpenLogFolder, "Open log folder", Shortcut.Parse("Primary+Shift+L")),
+        new(OpenLogFolder, Strings.Command_OpenLogFolder, Shortcut.Parse("Primary+Shift+L")),
     ];
 }

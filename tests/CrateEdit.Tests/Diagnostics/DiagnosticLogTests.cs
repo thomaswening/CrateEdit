@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrateEdit.Core;
 using CrateEdit.Core.Diagnostics;
 using Microsoft.Extensions.Time.Testing;
@@ -27,6 +28,27 @@ public sealed class DiagnosticLogTests : IDisposable
         var content = File.ReadAllText(file);
         Assert.Contains(@"~\Music\track.mp3", content);
         Assert.DoesNotContain("jane", content);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-129")]
+    public void Log_entries_do_not_depend_on_the_ui_language()
+    {
+        var paths = new AppPaths(_dataDir);
+        var original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+        try
+        {
+            using var logger = DiagnosticLog.Create(paths, PathRedactor.ForCurrentUser, TimeProvider.System);
+            logger.Information("Retrying after {Seconds} seconds", 1.5);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+
+        var content = File.ReadAllText(Assert.Single(Directory.GetFiles(paths.LogDirectory)));
+        Assert.Contains("Retrying after 1.5 seconds", content);
     }
 
     [Fact]

@@ -1,6 +1,6 @@
 # CrateEdit: Verifiable Product Requirements
-Version: 0.4 draft | 9 October 2026
-Status: Consistency pass on v0.3. Open decisions are collected in section 12 (OPEN-C, OPEN-D, OPEN-F to OPEN-N). Supersedes v0.3.
+Version: 0.5 draft | 12 October 2026
+Status: Adds localization and text handling (section 12). Open decisions are collected in section 13 (OPEN-C, OPEN-D, OPEN-F to OPEN-N). Supersedes v0.4.
 
 ## Requirement conventions
 **SHALL** = mandatory for the stated release; **SHOULD** = preferred, with an acceptable documented exception; **COULD** = optional or future capability. Each requirement has a stable ID. Conditions are expressed as **WHEN … THEN …**, **IF … THEN …**, **BEFORE …**, **WHILE …**, or **AFTER …**. An implementation technique is not a product requirement unless explicitly stated. Items marked **OPEN** require a decision before they can be treated as acceptance criteria. **OUT OF SCOPE** marks a capability explicitly not required for the first release.
@@ -271,7 +271,23 @@ Status: Consistency pass on v0.3. Open decisions are collected in section 12 (OP
 
 **REQ-119 — Crash reporting (COULD).** A future release COULD offer optional crash/diagnostic reporting to the developer. IF offered, THEN it SHALL be opt-in, require explicit consent before any data is transmitted, let the user review what would be sent, and remain disableable at any time.
 
-## 12. Deferred capabilities and unresolved decisions
+## 12. Localization and text handling
+
+**REQ-123 — UI languages (SHALL).** The user interface SHALL be available in English and German. All user-facing text SHALL be translatable without code changes; product names (e.g. CrateEdit, Rekordbox) and the user's own metadata are not translated.
+
+**REQ-124 — Language selection (SHALL).** The application SHALL use the operating system's display language if it is supported, and English otherwise. A user-selectable language override SHOULD be offered in the settings; a language change MAY require a restart.
+
+**REQ-125 — Regional formatting (SHALL).** Dates, times and numbers shown in the user interface SHALL follow the user's regional settings.
+
+**REQ-126 — Accent- and case-insensitive search (SHALL).** Text search and text filters SHALL ignore letter case and diacritics, e.g. searching "beyonce" SHALL find "Beyoncé".
+
+**REQ-127 — Culture-aware sorting (SHALL).** Text columns SHALL be sorted according to the conventions of the user's regional settings rather than by character code, e.g. "Ärzte" SHALL sort near "Arzt", not after "Z".
+
+**REQ-128 — Unicode normalization (SHALL).** Text and file paths SHALL be compared in a way that treats canonically equivalent Unicode forms as equal (e.g. "é" as one character or as "e" plus a combining accent, as macOS file names use). The application SHALL NOT change the Unicode form of metadata values it does not edit.
+
+**REQ-129 — Language-independent data (SHALL).** Persisted data (index, staging, saved filters, shortcuts) and diagnostic logs SHALL NOT depend on the UI language, so that changing the language does not affect saved data and logs remain readable for troubleshooting.
+
+## 13. Deferred capabilities and unresolved decisions
 
 **REQ-120 — Future extensions (COULD).** Later versions COULD support multiple collection roots, manually curated named track lists, custom fields, external metadata providers and waveform display. These are not first-release acceptance criteria.
 
