@@ -13,4 +13,22 @@
   <data name="Status_NoCollection" xml:space="preserve">
     <value>Keine Sammlung geladen.</value>
   </data>
+  <data name="Error_tags_unsupported_version" xml:space="preserve">
+    <value>Die Tags der Datei verwenden ein altes Format, das CrateEdit nicht sicher bearbeiten kann. Die Datei wurde nicht verändert.</value>
+  </data>
+  <data name="Error_tags_unsupported_feature" xml:space="preserve">
+    <value>Die Tags der Datei verwenden eine Funktion, die CrateEdit nicht unterstützt. Die Datei wurde nicht verändert.</value>
+  </data>
+  <data name="Error_tags_malformed" xml:space="preserve">
+    <value>Die Tags der Datei sind beschädigt oder haben ein unerwartetes Format. Die Datei wurde nicht verändert.</value>
+  </data>
+  <data name="Error_tags_encoded_frame" xml:space="preserve">
+    <value>Dieses Feld ist komprimiert oder verschlüsselt gespeichert und kann nicht bearbeitet werden. Die Datei wurde nicht verändert.</value>
+  </data>
+  <data name="Error_tags_duplicate_frame" xml:space="preserve">
+    <value>Dieses Feld ist mehrfach in der Datei gespeichert, daher ist unklar, welcher Wert gilt. Die Datei wurde nicht verändert.</value>
+  </data>
+  <data name="Error_Unknown" xml:space="preserve">
+    <value>Ein unerwartetes Problem ist aufgetreten ({0}).</value>
+  </data>
 </root>

@@ -25,7 +25,7 @@ public class RealFileTests : Mp3TagTestBase
         Assert.SkipWhen(SampleDirectory is null, "CRATEEDIT_SAMPLES is not set.");
         var source = File.ReadAllBytes(Path.Combine(SampleDirectory!, fileName));
         var original = Read(source);
-        Assert.True(original.CanWrite, original.NotWritableReason);
+        Assert.True(original.CanWrite, original.WriteProblem?.ToString());
 
         var changes = Enum.GetValues<TagField>().ToDictionary(f => f, f => (string?)$"Edited {f} ✓");
         var edited = Edit(source, changes);

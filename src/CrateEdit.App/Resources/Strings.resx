@@ -16,4 +16,28 @@
     <value>No collection loaded.</value>
     <comment>Status bar when no collection root is configured.</comment>
   </data>
+  <data name="Error_tags_unsupported_version" xml:space="preserve">
+    <value>The file's tags use an old format that CrateEdit cannot edit safely. The file was not changed.</value>
+    <comment>Error tags.unsupported-version.</comment>
+  </data>
+  <data name="Error_tags_unsupported_feature" xml:space="preserve">
+    <value>The file's tags use a feature that CrateEdit does not support. The file was not changed.</value>
+    <comment>Error tags.unsupported-feature.</comment>
+  </data>
+  <data name="Error_tags_malformed" xml:space="preserve">
+    <value>The file's tags are damaged or in an unexpected format. The file was not changed.</value>
+    <comment>Error tags.malformed.</comment>
+  </data>
+  <data name="Error_tags_encoded_frame" xml:space="preserve">
+    <value>This field is stored compressed or encrypted and cannot be edited. The file was not changed.</value>
+    <comment>Error tags.encoded-frame.</comment>
+  </data>
+  <data name="Error_tags_duplicate_frame" xml:space="preserve">
+    <value>This field is stored more than once in the file, so it is unclear which value is used. The file was not changed.</value>
+    <comment>Error tags.duplicate-frame.</comment>
+  </data>
+  <data name="Error_Unknown" xml:space="preserve">
+    <value>An unexpected problem occurred ({0}).</value>
+    <comment>Fallback for an error code without a message. {0} is the error code.</comment>
+  </data>
 </root>

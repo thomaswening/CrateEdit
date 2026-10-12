@@ -211,7 +211,7 @@ If the new frames had not fit (e.g. a much longer comment), the tag would have g
 | Edited frame is compressed or encrypted | Its content cannot be read or replaced as plain text |
 | Two frames for an edited field (e.g. two `TPE1`) | Unclear which one software reads; editing one would leave the other stale |
 
-Refusing means: the file is not changed, and the reason is reported (`TagWriteException` for now).
+Refusing means: the file is not changed, and the writer returns a `TagNotWritable` error naming the problem ([ADR-0009](../adr/0009-result-pattern-and-typed-errors.md)).
 
 ## 6. Versions at a glance
 

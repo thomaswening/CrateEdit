@@ -239,8 +239,19 @@ public class Mp3TagWriterTests : Mp3TagTestBase
     {
         var source = Mp3Fixture.Build(3, [Frames.Text("TIT2", "Title", encoding: 0)], flags: 0x80);
 
-        Assert.False(Read(source).CanWrite);
-        Assert.Throws<TagWriteException>(() => Edit(source, TagField.Title, "New"));
+        Assert.Equal(TagProblem.UnsupportedFeature, Read(source).WriteProblem?.Problem);
+        AssertRefused(source, TagField.Title, TagProblem.UnsupportedFeature);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-088")]
+    public void Id3v22_is_reported_as_unsupported_version()
+    {
+        var source = Mp3Fixture.Build(4, [Frames.Text("TIT2", "Title")]);
+        source[3] = 2;
+
+        Assert.Equal(new TagNotWritable(TagProblem.UnsupportedVersion, Version: 2), Read(source).WriteProblem);
+        AssertRefused(source, TagField.Title, TagProblem.UnsupportedVersion);
     }
 
     [Fact]
@@ -251,8 +262,9 @@ public class Mp3TagWriterTests : Mp3TagTestBase
         var tagEnd = Mp3Fixture.Parse(source).TagSize + 10;
         source[tagEnd - 10] = 0x42;
 
-        Assert.False(Read(source).CanWrite);
-        Assert.Throws<TagWriteException>(() => Edit(source, TagField.Title, "New"));
+        Assert.Equal(TagProblem.Malformed, Read(source).WriteProblem?.Problem);
+        var error = AssertRefused(source, TagField.Title, TagProblem.Malformed);
+        Assert.NotNull(error.Offset);
     }
 
     [Fact]
@@ -262,7 +274,7 @@ public class Mp3TagWriterTests : Mp3TagTestBase
         var compressed = Frames.Text("TPE1", "Artist") with { Flags = 0x0008 };
         var source = Mp3Fixture.Build(4, [compressed, Frames.Text("TIT2", "Title")]);
 
-        Assert.Throws<TagWriteException>(() => Edit(source, TagField.Artist, "New"));
+        Assert.Equal("TPE1", AssertRefused(source, TagField.Artist, TagProblem.EncodedFrame).FrameId);
         var edited = Edit(source, TagField.Title, "New title");
         Assert.True(compressed.SameBytesAs(Mp3Fixture.Parse(edited).Frames[0]));
     }
@@ -273,7 +285,8 @@ public class Mp3TagWriterTests : Mp3TagTestBase
     {
         var source = Mp3Fixture.Build(3, [Frames.Text("TPE1", "One", encoding: 0), Frames.Text("TPE1", "Two", encoding: 0)]);
 
-        Assert.Throws<TagWriteException>(() => Edit(source, TagField.Artist, "New"));
+        Assert.Equal("TPE1", AssertRefused(source, TagField.Artist, TagProblem.DuplicateFrame).FrameId);
+        Assert.True(Read(source).CanWrite);
     }
 
     [Fact]

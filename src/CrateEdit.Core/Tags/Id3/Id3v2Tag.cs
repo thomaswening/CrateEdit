@@ -65,11 +65,11 @@ internal sealed class Id3v2Tag
     /// <summary>Every frame starts with a 10-byte frame header: 4-byte id, 4-byte body size, 2 flag bytes.</summary>
     public const int FrameHeaderSizeBytes = 10;
 
-    private Id3v2Tag(Id3v2Header header, List<Id3v2Frame> frames, string? notWritableReason)
+    private Id3v2Tag(Id3v2Header header, List<Id3v2Frame> frames, TagNotWritable? problem)
     {
         Header = header;
         Frames = frames;
-        NotWritableReason = notWritableReason;
+        Problem = problem;
     }
 
     public Id3v2Header Header { get; }
@@ -80,7 +80,7 @@ internal sealed class Id3v2Tag
     public IReadOnlyList<Id3v2Frame> Frames { get; }
 
     /// <summary>Null if the tag can be rewritten safely; otherwise why not.</summary>
-    public string? NotWritableReason { get; }
+    public TagNotWritable? Problem { get; }
 
     /// <summary>
     /// Parses the frames of a tag. <paramref name="tag"/> holds the whole tag as described by
@@ -92,14 +92,13 @@ internal sealed class Id3v2Tag
 
         if (header.Version is not (3 or 4))
         {
-            return new Id3v2Tag(header, frames, $"ID3v2.{header.Version} is not supported.");
+            return new Id3v2Tag(header, frames, new TagNotWritable(TagProblem.UnsupportedVersion, Version: header.Version));
         }
 
         if (header.HasFlag(Id3v2Header.UnsynchronisationFlag) || header.HasFlag(Id3v2Header.ExtendedHeaderFlag) ||
             header.HasFlag(Id3v2Header.FooterFlag))
         {
-            return new Id3v2Tag(header, frames,
-                "The tag uses unsynchronisation, an extended header or a footer, which are not supported.");
+            return new Id3v2Tag(header, frames, new TagNotWritable(TagProblem.UnsupportedFeature, Version: header.Version));
         }
 
         // Walk the frames: read a frame header, take the body by its declared size, continue
@@ -111,7 +110,7 @@ internal sealed class Id3v2Tag
             var id = body.Slice(position, 4);
             if (!IsValidFrameId(id))
             {
-                return Invalid($"Invalid frame identifier at offset {Id3v2Header.SizeBytes + position}.");
+                return Malformed(frameId: null, position);
             }
 
             var sizeBytes = body.Slice(position + 4, 4);
@@ -119,7 +118,7 @@ internal sealed class Id3v2Tag
             if (bodySize < 0 || (header.Version == 4 && !Synchsafe.IsValid(sizeBytes)) ||
                 position + FrameHeaderSizeBytes + bodySize > body.Length)
             {
-                return Invalid($"Frame {Encoding.ASCII.GetString(id)} has an invalid size.");
+                return Malformed(Encoding.ASCII.GetString(id), position);
             }
 
             frames.Add(new Id3v2Frame(
@@ -133,12 +132,13 @@ internal sealed class Id3v2Tag
         // fully understood, and rewriting it could lose data.
         if (body[position..].ContainsAnyExcept((byte)0))
         {
-            return Invalid($"Unrecognised data after the last frame at offset {Id3v2Header.SizeBytes + position}.");
+            return Malformed(frameId: null, position);
         }
 
         return new Id3v2Tag(header, frames, null);
 
-        Id3v2Tag Invalid(string reason) => new(header, frames, reason);
+        Id3v2Tag Malformed(string? frameId, int bodyPosition) => new(header, frames,
+            new TagNotWritable(TagProblem.Malformed, frameId, Id3v2Header.SizeBytes + bodyPosition, header.Version));
     }
 
     /// <summary>
