@@ -1,9 +1,7 @@
+using CrateEdit.Core.Results;
 using CrateEdit.Core.Tags.Id3;
 
 namespace CrateEdit.Core.Tags.Writing;
-
-/// <summary>Thrown when tags cannot be written without risking data loss. The source file is unchanged.</summary>
-public sealed class TagWriteException(string message) : Exception(message);
 
 /// <summary>
 /// Writes edited MP3 tags (REQ-088, REQ-130). Only the frames of the edited fields are rebuilt;
@@ -24,23 +22,26 @@ public static class Mp3TagWriter
     /// Writes <paramref name="sourcePath"/> with <paramref name="changes"/> applied to
     /// <paramref name="destinationPath"/>. A null or empty value clears the field.
     /// </summary>
-    /// <exception cref="TagWriteException">The tag or an edited frame is not supported for writing.</exception>
-    public static void Rewrite(string sourcePath, string destinationPath, IReadOnlyDictionary<TagField, string?> changes)
+    /// <returns>
+    /// Success, or <see cref="TagNotWritable"/> if the tag or an edited frame cannot be written
+    /// safely; no destination file is created in that case. I/O failures throw (ADR-0009).
+    /// </returns>
+    public static Result Rewrite(string sourcePath, string destinationPath, IReadOnlyDictionary<TagField, string?> changes)
     {
         using var source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         var existing = Mp3TagReader.ReadId3v2(source);
         var tag = existing ?? Id3v2Tag.CreateEmpty();
-        if (tag.NotWritableReason is { } reason)
+        if (tag.Problem is { } tagProblem)
         {
-            throw new TagWriteException(reason);
+            return tagProblem;
         }
 
         IReadOnlyList<Id3v2Frame> frames = tag.Frames;
         foreach (var (field, value) in changes)
         {
-            if (Id3FieldMap.CheckEditable(frames, field, tag.Version) is { } fieldReason)
+            if (Id3FieldMap.CheckEditable(frames, field, tag.Version) is { } fieldProblem)
             {
-                throw new TagWriteException(fieldReason);
+                return fieldProblem;
             }
 
             frames = Id3FieldMap.Apply(frames, field, value, tag.Version);
@@ -65,6 +66,7 @@ public static class Mp3TagWriter
         }
 
         destination.Flush(flushToDisk: true);
+        return Result.Success;
     }
 
     private static void CopyBytes(Stream source, Stream destination, long count)

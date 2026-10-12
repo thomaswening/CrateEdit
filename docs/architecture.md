@@ -166,7 +166,7 @@ Everything CrateEdit owns lives in the app data folder (`%LOCALAPPDATA%\CrateEdi
 ## 7. Cross-cutting concepts
 
 - **Logging:** Serilog to local daily files, home directory redacted, no network sinks. Implemented.
-- **Errors:** failures in one track never stop independent tracks (REQ-078); transient failures are retried with a bound, and shared causes (e.g. a disconnected drive) are detected once instead of per track (REQ-079).
+- **Errors:** expected failures are returned as `Result`s with typed errors that carry a stable code. Infrastructure exceptions are converted into such errors at boundaries, and programming errors are not caught. The UI translates error codes into localized messages ([ADR-0009](adr/0009-result-pattern-and-typed-errors.md)). In apply, failures in one track never stop independent tracks (REQ-078); transient failures are retried with a bound, and shared causes (e.g. a disconnected drive) are detected once instead of per track (REQ-079).
 - **Threading:** scanning, synchronization and apply run in the background; the UI thread only renders and handles input. Long operations report progress and remain cancellable.
 - **Localization:** all UI text comes from `.resx` resources in English and German, following the OS display language with English as fallback. Persisted data and logs are language-independent ([ADR-0007](adr/0007-localization-and-text-matching.md)). Implemented.
 - **Text matching:** search ignores case and accents, sorting follows the user's regional conventions, and identity checks treat composed and decomposed Unicode as equal. All comparisons go through `TextMatching` in Core ([ADR-0007](adr/0007-localization-and-text-matching.md)). Implemented.
@@ -184,6 +184,7 @@ Everything CrateEdit owns lives in the app data folder (`%LOCALAPPDATA%\CrateEdi
 | [0006](adr/0006-gpl-license.md) | GPL-3.0 license | Accepted |
 | [0007](adr/0007-localization-and-text-matching.md) | Localization with resource files; central text-matching rules | Accepted |
 | [0008](adr/0008-own-id3v2-frame-editor.md) | Own frame-level ID3v2 editor instead of a tag library | Proposed |
+| [0009](adr/0009-result-pattern-and-typed-errors.md) | Results with typed errors for expected failures | Proposed |
 
 ## 9. Risks
 
