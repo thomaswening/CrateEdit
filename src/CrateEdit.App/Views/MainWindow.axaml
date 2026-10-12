@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CrateEdit.App.ViewModels"
+        xmlns:res="using:CrateEdit.App.Resources"
         x:Class="CrateEdit.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding Title}"
@@ -8,8 +9,8 @@
         MinWidth="800" MinHeight="500">
   <DockPanel>
     <Menu DockPanel.Dock="Top">
-      <MenuItem Header="_Help">
-        <MenuItem Header="Open log folder"
+      <MenuItem Header="{x:Static res:Strings.Menu_Help}">
+        <MenuItem Header="{x:Static res:Strings.Command_OpenLogFolder}"
                   Tag="diagnostics.openLogFolder"
                   Command="{Binding OpenLogFolderCommand}" />
       </MenuItem>

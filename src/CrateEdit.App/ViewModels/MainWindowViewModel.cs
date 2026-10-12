@@ -2,6 +2,7 @@ using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CrateEdit.App.Commands;
+using CrateEdit.App.Resources;
 using CrateEdit.App.Services;
 using CrateEdit.Core;
 
@@ -28,7 +29,7 @@ public partial class MainWindowViewModel : ObservableObject
     public IReadOnlyDictionary<string, ICommand> CommandHandlers { get; }
 
     [ObservableProperty]
-    private string _statusText = "No collection loaded.";
+    private string _statusText = Strings.Status_NoCollection;
 
     [RelayCommand]
     private Task OpenLogFolder() => _shell.OpenFolderAsync(_paths.LogDirectory);
