@@ -147,7 +147,7 @@ flowchart LR
 ```
 
 - **Recovery material** is stored in local app data, not next to the file, so it survives the collection disconnecting mid-write ([REQ-013](requirements.md#req-013)).
-- **Safe write:** the file is either fully old or fully new, never half-written. The exact technique (e.g. write a temporary copy and atomically replace) is decided by the Phase 1 spike ([OPEN-C](requirements.md#open-c)).
+- **Safe write:** the file is either fully old or fully new, never half-written. The new file is written to a temporary file next to the original, verified, and swapped in with `File.Replace`. Tag-only recovery material in app data and a reconciliation step after crashes cover storage where the swap is not crash-atomic, such as FAT32 or Google Drive ([ADR-0010](adr/0010-safe-write-technique.md)).
 - **Finalize** happens only when the run completes or the user keeps the result after cancelling. Until then, applied tracks can still be reverted ([REQ-083](requirements.md#req-083)).
 - In the first release, preflight is a simple **stale-value check**: a track whose on-disk values changed since staging is skipped and reported. The full conflict resolution UI follows in Phase 7.
 
@@ -185,6 +185,7 @@ Everything CrateEdit owns lives in the app data folder (`%LOCALAPPDATA%\CrateEdi
 | [0007](adr/0007-localization-and-text-matching.md) | Localization with resource files; central text-matching rules | Accepted |
 | [0008](adr/0008-own-id3v2-frame-editor.md) | Own frame-level ID3v2 editor instead of a tag library | Proposed |
 | [0009](adr/0009-result-pattern-and-typed-errors.md) | Results with typed errors for expected failures | Proposed |
+| [0010](adr/0010-safe-write-technique.md) | Safe write technique: temp file, recovery record, replace, verify | Proposed |
 
 ## 9. Risks
 
@@ -192,6 +193,7 @@ Everything CrateEdit owns lives in the app data folder (`%LOCALAPPDATA%\CrateEdi
 |---|---|
 | A tag write damages proprietary DJ data (cues, beatgrids, GEOB) | Own frame-level editor that copies non-edited frames as raw bytes ([ADR-0008](adr/0008-own-id3v2-frame-editor.md)); byte-level preservation tests on synthetic Serato/Traktor frames and real files; still to be confirmed with files analyzed by Serato or Traktor |
 | WAV tags written in a form DJ software does not read | Phase 1 spike and manual checks in each DJ application ([OPEN-D](requirements.md#open-d)) |
-| Atomic replace behaves differently on cloud-sync mounts | Spike on a real Google Drive mount ([OPEN-C](requirements.md#open-c)) |
+| Atomic replace behaves differently on cloud-sync mounts | Spike done: `File.Replace` works on Google Drive but is not crash-atomic there (nor on FAT32/exFAT); covered by local recovery material, verification and reconciliation ([ADR-0010](adr/0010-safe-write-technique.md)) |
+| Other software (DJ applications, players) keeps files open and blocks writes | Treated as a transient failure with bounded retry and a clear report; CrateEdit's own player opens files permissively |
 | macOS cannot enforce file locks | Expected; handled by the "protection unavailable" path ([REQ-073](requirements.md#req-073)) and the stale-value check |
 | Avalonia grid performance or keyboard handling differs from WPF | Early table work in Phase 2 with 20,000 rows; headless end-to-end tests for keyboard flows |
