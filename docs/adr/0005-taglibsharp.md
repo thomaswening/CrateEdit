@@ -1,6 +1,6 @@
 # ADR-0005: TagLib# for tag reading and writing
 
-- **Status:** Proposed, pending the Phase 1 spike
+- **Status:** Superseded by [ADR-0008](0008-own-id3v2-frame-editor.md) (the Phase 1 spike showed that TagLib# does not preserve untouched frames)
 - **Date:** 2026-10-09
 
 ## Context

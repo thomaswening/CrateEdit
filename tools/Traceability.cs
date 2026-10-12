@@ -33,7 +33,8 @@ report.AppendLine();
 
 var rows = requirements.Select(requirement =>
 {
-    var linked = tests.Where(t => t.Requirements.Contains(requirement.Id)).ToList();
+    // Skipped tests (e.g. tests that need local sample files) neither cover nor fail a requirement.
+    var linked = tests.Where(t => t.Requirements.Contains(requirement.Id) && t.Result != "Skip").ToList();
     var names = linked.Select(t => t.Name).Distinct()
         .GroupBy(ShortName)
         .Select(cases => cases.Count() > 1 ? $"{cases.Key} ({cases.Count()} cases)" : cases.Key)
