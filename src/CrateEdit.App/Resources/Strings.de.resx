@@ -58,4 +58,22 @@
   <data name="Field_Year" xml:space="preserve">
     <value>Jahr</value>
   </data>
+  <data name="Error_files_locked" xml:space="preserve">
+    <value>Die Datei ist in einem anderen Programm geöffnet, daher konnte CrateEdit sie nicht speichern. Schließe die Datei im anderen Programm und versuche es erneut. Die Datei wurde nicht verändert.</value>
+  </data>
+  <data name="Error_files_access_denied" xml:space="preserve">
+    <value>CrateEdit darf diese Datei nicht ändern. Prüfe, ob sie schreibgeschützt ist und ob du sie ändern darfst. Die Datei wurde nicht verändert.</value>
+  </data>
+  <data name="Error_files_not_found" xml:space="preserve">
+    <value>Die Datei wurde nicht gefunden. Sie wurde möglicherweise verschoben oder gelöscht, oder ihr Laufwerk ist nicht verbunden.</value>
+  </data>
+  <data name="Error_files_disk_full" xml:space="preserve">
+    <value>Das Laufwerk ist voll, daher konnte CrateEdit die Datei nicht speichern. Gib etwas Speicherplatz frei und versuche es erneut. Die Datei wurde nicht verändert.</value>
+  </data>
+  <data name="Error_files_verification_failed" xml:space="preserve">
+    <value>CrateEdit hat die gespeicherte Datei geprüft und ein Problem gefunden, daher wurde das Original behalten. Die Datei wurde nicht verändert.</value>
+  </data>
+  <data name="Error_files_io_error" xml:space="preserve">
+    <value>Die Datei konnte nicht gelesen oder geschrieben werden. Prüfe, ob ihr Laufwerk verbunden ist, und versuche es erneut.</value>
+  </data>
 </root>

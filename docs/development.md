@@ -72,6 +72,8 @@ Tests that need real files (e.g. `RealFileTests`) read them from the folder in t
 CRATEEDIT_SAMPLES=/path/to/sample/mp3s dotnet test -c Release --filter "FullyQualifiedName~RealFile"
 ```
 
+Set `CRATEEDIT_WRITE_DIR` as well to run the safe-write tests on specific storage, e.g. a folder on a USB stick or on the Google Drive mount. The tests create and remove their own subfolder there.
+
 ### Requirements traceability
 - CI produces a traceability report listing every requirement, the tests tagged with it, and a status: **Passing**, **Failing**, **Manual** or **Not covered**. It appears in each CI job's summary and in the `test-results-<os>` artifact.
 - The report and a unit test both fail on tags that name a requirement that does not exist.

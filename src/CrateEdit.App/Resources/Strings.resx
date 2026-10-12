@@ -76,4 +76,28 @@
     <value>Year</value>
     <comment>Name of a metadata field, as shown in table column headers and messages.</comment>
   </data>
+  <data name="Error_files_locked" xml:space="preserve">
+    <value>The file is open in another program, so CrateEdit could not save it. Close the file in the other program and try again. The file was not changed.</value>
+    <comment>Error files.locked.</comment>
+  </data>
+  <data name="Error_files_access_denied" xml:space="preserve">
+    <value>CrateEdit is not allowed to change this file. Check that it is not read-only and that you have permission to change it. The file was not changed.</value>
+    <comment>Error files.access-denied.</comment>
+  </data>
+  <data name="Error_files_not_found" xml:space="preserve">
+    <value>The file could not be found. It may have been moved or deleted, or its drive may be disconnected.</value>
+    <comment>Error files.not-found.</comment>
+  </data>
+  <data name="Error_files_disk_full" xml:space="preserve">
+    <value>The drive is full, so CrateEdit could not save the file. Free up some space and try again. The file was not changed.</value>
+    <comment>Error files.disk-full.</comment>
+  </data>
+  <data name="Error_files_verification_failed" xml:space="preserve">
+    <value>CrateEdit checked the saved file and found a problem, so it kept the original. The file was not changed.</value>
+    <comment>Error files.verification-failed.</comment>
+  </data>
+  <data name="Error_files_io_error" xml:space="preserve">
+    <value>The file could not be read or written. Check that its drive is connected and try again.</value>
+    <comment>Error files.io-error.</comment>
+  </data>
 </root>

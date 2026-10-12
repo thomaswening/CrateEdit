@@ -22,4 +22,7 @@ public sealed class AppPaths
     public string DataDirectory { get; }
 
     public string LogDirectory => Path.Combine(DataDirectory, "Logs");
+
+    /// <summary>Recovery records for writes in progress (ADR-0010).</summary>
+    public string RecoveryDirectory => Path.Combine(DataDirectory, "Recovery");
 }
