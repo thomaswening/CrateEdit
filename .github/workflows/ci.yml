@@ -23,10 +23,23 @@ jobs:
           global-json-file: global.json
       - name: Build
         run: dotnet build -c Release
+      # The native xUnit runner writes an XML report that includes the requirement tags.
       - name: Test
-        run: dotnet test -c Release --no-build --logger trx --results-directory TestResults
+        run: dotnet tests/CrateEdit.Tests/bin/Release/net10.0/CrateEdit.Tests.dll -xml TestResults/results.xml
+      - name: Requirements traceability
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          status=0
+          dotnet run tools/Traceability.cs -- \
+            --requirements docs/requirements.md \
+            --manual docs/manual-verification.md \
+            --results TestResults/results.xml \
+            --output TestResults/traceability.md > /dev/null || status=$?
+          cat TestResults/traceability.md >> "$GITHUB_STEP_SUMMARY"
+          exit $status
       - name: Upload test results
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.os }}

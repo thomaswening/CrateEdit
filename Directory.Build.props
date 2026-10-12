@@ -1,5 +1,7 @@
 <Project>
   <PropertyGroup>
+    <!-- Set by release-please from conventional commits; do not edit by hand. -->
+    <Version>0.0.0</Version> <!-- x-release-please-version -->
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

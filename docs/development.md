@@ -13,7 +13,9 @@ GitHub flow:
 - Because PRs are squash-merged, the **PR title** becomes the commit message on `main`; CI validates that it is a conventional commit.
 - A scope may name the area, e.g. `feat(tags): write BPM and key to WAV`.
 - [release-please](https://github.com/googleapis/release-please) reads the conventional commits on `main`, maintains a release PR with the next version and `CHANGELOG.md`, and creates the GitHub release and tag when that PR is merged.
-- Versioning follows SemVer, starting at `0.x` until the requirements are complete.
+- Versioning follows SemVer, starting at `0.x` until the requirements are complete. Before 1.0, `feat` bumps the minor version and `fix` the patch version. The version lives in `Directory.Build.props` and is updated only by release-please.
+- The release PR is kept open and updated automatically; it is merged only when a release is intended (the first one at the end of Milestone 2).
+- `feat`, `fix`, `perf` and `docs` appear in the changelog; `build`, `ci`, `test`, `refactor` and `chore` are hidden.
 
 ## Pull requests
 - One PR per coherent, reviewable slice of a phase (typically several PRs per phase), not one PR per phase.
@@ -49,7 +51,14 @@ Key guardrails and how they are enforced:
 Real DJ-software-tagged files contain copyrighted audio and must not be committed. Fixtures in the repository are generated: short synthetic audio (silence or a tone) carrying tag frames copied from real files (Serato GEOB, Rekordbox/Traktor data), so the frames being protected are real while the audio is not. Original sample files stay outside the repository.
 
 ### Requirements traceability
-- CI produces a traceability report listing every requirement ID, the tests tagged with it, and their result.
+- CI produces a traceability report listing every requirement, the tests tagged with it, and a status: **Passing**, **Failing**, **Manual** or **Not covered**. It appears in each CI job's summary and in the `test-results-<os>` artifact.
+- The report and a unit test both fail on tags that name a requirement that does not exist.
+- To produce the report locally:
+  ```bash
+  dotnet build -c Release
+  dotnet tests/CrateEdit.Tests/bin/Release/net10.0/CrateEdit.Tests.dll -xml TestResults/results.xml
+  dotnet run tools/Traceability.cs -- --requirements docs/requirements.md --manual docs/manual-verification.md --results TestResults/results.xml --output TestResults/traceability.md
+  ```
 - Requirements that cannot be automated (e.g. "Rekordbox reads the written key", performance on the minimum configuration) are listed in `docs/manual-verification.md` with steps, and checked manually.
 - **Phase exit check:** a phase is complete only when every requirement assigned to it in the roadmap is either covered by passing tests or listed and checked in the manual verification list, and the phase's open decisions are recorded in the requirements.
 
@@ -57,9 +66,9 @@ Real DJ-software-tagged files contain copyrighted audio and must not be committe
 GitHub Actions on every PR and on `main`:
 - build and all test layers on Windows and macOS,
 - PR title check (conventional commit),
-- traceability report as a build artifact.
+- traceability report in the job summary and as a build artifact.
 
-Release workflow (release-please) builds unsigned packages for Windows and macOS and attaches them to the GitHub release.
+On `main`, the release-please workflow maintains the release PR. Building unsigned Windows and macOS packages and attaching them to the GitHub release is added before the first release (Milestone 2).
 
 ## Releases and distribution
 - Releases are published on GitHub Releases, unsigned. Windows SmartScreen and macOS Gatekeeper will warn on first launch; the release notes explain how to open the app anyway.
