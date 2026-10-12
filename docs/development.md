@@ -22,6 +22,14 @@ GitHub flow:
 - Every PR states which requirement IDs it implements or touches.
 - A PR merges only when CI is green on Windows and macOS and the owner has reviewed it.
 
+## Error handling
+Follow [ADR-0009](adr/0009-result-pattern-and-typed-errors.md):
+- **Expected failures** return `Result` / `Result<T>` with a typed `Error`.
+- **I/O exceptions** are converted into errors at boundaries.
+- **Bugs** throw and are not caught.
+
+Every new error code goes into `ErrorCodes` and needs an `Error_<code>` message in both resource files in the same PR; tests enforce this.
+
 ## User-facing text
 - No hard-coded UI text: every string goes into `src/CrateEdit.App/Resources/Strings.resx` (English) **and** `Strings.de.resx` (German) in the same PR. Tests fail on missing translations and on literal text in XAML.
 - Text comparisons (search, sorting, equality of names and paths) use `CrateEdit.Core.Text.TextMatching`, never ad-hoc `string.Equals` or `Contains`.

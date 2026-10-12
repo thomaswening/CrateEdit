@@ -58,7 +58,7 @@ internal static class Id3FieldMap
     }
 
     /// <summary>Why a field's frame cannot be edited safely, or null if it can.</summary>
-    public static string? CheckEditable(IReadOnlyList<Id3v2Frame> frames, TagField field, int version)
+    public static TagNotWritable? CheckEditable(IReadOnlyList<Id3v2Frame> frames, TagField field, int version)
     {
         var index = FindFrame(frames, field, version);
         if (index < 0)
@@ -69,15 +69,17 @@ internal static class Id3FieldMap
         var frame = frames[index];
         if (frame.HasFormatFlags(version))
         {
-            return $"The {frame.Id} frame is compressed, encrypted or otherwise encoded.";
+            return new TagNotWritable(TagProblem.EncodedFrame, frame.Id, Version: version) { Field = field };
         }
 
         if (field != TagField.Comment && frames.Count(f => f.Id == frame.Id) > 1)
         {
-            return $"The tag contains more than one {frame.Id} frame.";
+            return new TagNotWritable(TagProblem.DuplicateFrame, frame.Id, Version: version) { Field = field };
         }
 
-        return ReadFrameValue(frame, field, version) is null ? $"The {frame.Id} frame cannot be decoded." : null;
+        return ReadFrameValue(frame, field, version) is null
+            ? new TagNotWritable(TagProblem.Malformed, frame.Id, Version: version) { Field = field }
+            : null;
     }
 
     public static TagValues Read(IReadOnlyList<Id3v2Frame> frames, int version) =>
