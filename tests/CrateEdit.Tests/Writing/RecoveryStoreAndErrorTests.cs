@@ -12,7 +12,7 @@ public sealed class FileRecoveryStoreTests : IDisposable
 
     private static RecoveryRecord Record(byte[]? newHash = null) => new(
         Guid.NewGuid(), "/music/track.mp3", "/music/.track.mp3.crateedit-tmp", 12345,
-        [0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, 0], null, [1, 2, 3], [4, 5, 6], newHash);
+        [0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, 0], [], [1, 2, 3], [4, 5, 6], newHash);
 
     [Fact]
     [Trait("Req", "REQ-089")]
@@ -25,7 +25,7 @@ public sealed class FileRecoveryStoreTests : IDisposable
         var loaded = Assert.Single(store.LoadAll());
 
         Assert.Equal(record.Id, loaded.Id);
-        Assert.Equal(record.OriginalId3v2Tag, loaded.OriginalId3v2Tag);
+        Assert.Equal(record.OriginalPrefix, loaded.OriginalPrefix);
         Assert.Equal(record.OriginalFileHash, loaded.OriginalFileHash);
         Assert.Null(loaded.NewFileHash);
     }

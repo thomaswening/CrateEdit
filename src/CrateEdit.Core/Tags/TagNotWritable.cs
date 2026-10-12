@@ -5,6 +5,9 @@ namespace CrateEdit.Core.Tags;
 /// <summary>Why a file's tags cannot be written safely (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-130">REQ-130</see>). The file is never changed in that case.</summary>
 public enum TagProblem
 {
+    /// <summary>The file's format is not supported (judged by its extension).</summary>
+    UnsupportedFormat,
+
     /// <summary>A tag version CrateEdit cannot edit, e.g. ID3v2.2.</summary>
     UnsupportedVersion,
 
@@ -35,6 +38,7 @@ public sealed record TagNotWritable(TagProblem Problem, string? FrameId = null, 
 
     public override string Code => Problem switch
     {
+        TagProblem.UnsupportedFormat => ErrorCodes.TagsUnsupportedFormat,
         TagProblem.UnsupportedVersion => ErrorCodes.TagsUnsupportedVersion,
         TagProblem.UnsupportedFeature => ErrorCodes.TagsUnsupportedFeature,
         TagProblem.Malformed => ErrorCodes.TagsMalformed,

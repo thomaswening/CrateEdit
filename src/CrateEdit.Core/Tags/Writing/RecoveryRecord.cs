@@ -3,14 +3,15 @@ namespace CrateEdit.Core.Tags.Writing;
 /// <summary>
 /// Everything needed to finish or undo a file write after a crash (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0010-safe-write-technique.md">ADR-0010</see>, <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-089">REQ-089</see>, <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-092">REQ-092</see>).
 /// The audio is never changed by a write, so the original file can be rebuilt from either
-/// version of the file plus the original tags kept here.
+/// version of the file plus the original bytes before and after the audio kept here
+/// (see <see cref="AudioLayout"/>).
 /// </summary>
 /// <param name="Id">Identifies the record in the store.</param>
 /// <param name="TargetPath">The file being written.</param>
 /// <param name="TempPath">The temporary file next to it.</param>
 /// <param name="OriginalLength">Length of the original file, in bytes.</param>
-/// <param name="OriginalId3v2Tag">The original ID3v2 tag bytes (empty if the file had none).</param>
-/// <param name="OriginalId3v1Tag">The original ID3v1 tag, or null.</param>
+/// <param name="OriginalPrefix">The original bytes before the audio (for MP3: the ID3v2 tag).</param>
+/// <param name="OriginalSuffix">The original bytes after the audio (for MP3: the ID3v1 tag), empty if none.</param>
 /// <param name="OriginalAudioHash">SHA-256 of the original audio bytes.</param>
 /// <param name="OriginalFileHash">SHA-256 of the whole original file.</param>
 /// <param name="NewFileHash">
@@ -22,8 +23,8 @@ public sealed record RecoveryRecord(
     string TargetPath,
     string TempPath,
     long OriginalLength,
-    byte[] OriginalId3v2Tag,
-    byte[]? OriginalId3v1Tag,
+    byte[] OriginalPrefix,
+    byte[] OriginalSuffix,
     byte[] OriginalAudioHash,
     byte[] OriginalFileHash,
     byte[]? NewFileHash);

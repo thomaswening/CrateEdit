@@ -54,7 +54,7 @@ public abstract class Mp3TagTestBase : IDisposable
         return error;
     }
 
-    internal Mp3Tags Read(byte[] file) => Mp3TagReader.Read(WriteFile(file));
+    internal FileTags Read(byte[] file) => Mp3TagReader.Read(WriteFile(file));
 
     /// <summary>
     /// Asserts that only the frames named in <paramref name="editedFrameIds"/> differ, everything

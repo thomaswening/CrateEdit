@@ -108,4 +108,8 @@
     <value>The safety information for this change could not be stored on this computer, so the file was not changed. Check that the system drive has free space.</value>
     <comment>Error recovery.unavailable.</comment>
   </data>
+  <data name="Error_tags_unsupported_format" xml:space="preserve">
+    <value>The file's format is not supported, so its tags cannot be edited. The file was not changed.</value>
+    <comment>Error tags.unsupported-format.</comment>
+  </data>
 </root>
