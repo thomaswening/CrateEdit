@@ -1,6 +1,6 @@
 namespace CrateEdit.Core.Diagnostics;
 
-/// <summary>Deletes diagnostic log files once they are older than the retention period (REQ-116).</summary>
+/// <summary>Deletes diagnostic log files once they are older than the retention period (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-116">REQ-116</see>).</summary>
 public static class LogRetention
 {
     public static readonly TimeSpan Period = TimeSpan.FromDays(30);

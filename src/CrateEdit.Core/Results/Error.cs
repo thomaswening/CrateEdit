@@ -1,7 +1,7 @@
 namespace CrateEdit.Core.Results;
 
 /// <summary>
-/// An expected failure that a caller must handle (ADR-0009). Each error has a stable
+/// An expected failure that a caller must handle (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0009-result-pattern-and-typed-errors.md">ADR-0009</see>). Each error has a stable
 /// <see cref="Code"/> that the UI translates into a localized message and the apply pipeline uses
 /// to decide on retries and to group failures. The record's generated <c>ToString()</c> includes
 /// all details and is what gets logged.

@@ -2,7 +2,7 @@ namespace CrateEdit.Core.Commands;
 
 /// <summary>
 /// The single source of truth for which shortcut triggers which command. Guarantees that a
-/// shortcut maps to at most one command (REQ-109), including the fixed shortcuts of
+/// shortcut maps to at most one command (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-109">REQ-109</see>), including the fixed shortcuts of
 /// non-configurable commands.
 /// </summary>
 public sealed class CommandRegistry
@@ -51,7 +51,7 @@ public sealed class CommandRegistry
     /// <summary>
     /// Assigns a shortcut to a configurable command, or removes its shortcut when
     /// <paramref name="shortcut"/> is null. A shortcut already used by another command is
-    /// rejected and the existing assignment stays unchanged (REQ-109).
+    /// rejected and the existing assignment stays unchanged (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-109">REQ-109</see>).
     /// </summary>
     public ShortcutAssignmentResult TryAssign(string commandId, Shortcut? shortcut)
     {

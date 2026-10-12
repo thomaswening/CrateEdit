@@ -17,11 +17,11 @@
     <comment>Status bar when no collection root is configured.</comment>
   </data>
   <data name="Error_tags_unsupported_version" xml:space="preserve">
-    <value>The file's tags use an old format that CrateEdit cannot edit safely. The file was not changed.</value>
+    <value>The file's tags use an old format that cannot be edited safely. The file was not changed.</value>
     <comment>Error tags.unsupported-version.</comment>
   </data>
   <data name="Error_tags_unsupported_feature" xml:space="preserve">
-    <value>The file's tags use a feature that CrateEdit does not support. The file was not changed.</value>
+    <value>The file's tags use a feature that is not supported. The file was not changed.</value>
     <comment>Error tags.unsupported-feature.</comment>
   </data>
   <data name="Error_tags_malformed" xml:space="preserve">
@@ -29,11 +29,11 @@
     <comment>Error tags.malformed.</comment>
   </data>
   <data name="Error_tags_encoded_frame" xml:space="preserve">
-    <value>CrateEdit cannot change the {0} of this file because it is stored in a special format that CrateEdit cannot edit safely. The file was not changed.</value>
+    <value>The {0} of this file is stored in a special format that cannot be edited safely. The file was not changed.</value>
     <comment>Error tags.encoded-frame. {0} is the field name as shown in the table, e.g. Artist.</comment>
   </data>
   <data name="Error_tags_duplicate_frame" xml:space="preserve">
-    <value>This file contains the {0} twice, so it is unclear which one other programs show. CrateEdit did not change the file.</value>
+    <value>This file contains the {0} twice, so it is unclear which one other programs show. The file was not changed.</value>
     <comment>Error tags.duplicate-frame. {0} is the field name as shown in the table, e.g. Artist.</comment>
   </data>
   <data name="Error_Unknown" xml:space="preserve">
@@ -77,27 +77,35 @@
     <comment>Name of a metadata field, as shown in table column headers and messages.</comment>
   </data>
   <data name="Error_files_locked" xml:space="preserve">
-    <value>The file is open in another program, so CrateEdit could not save it. Close the file in the other program and try again. The file was not changed.</value>
+    <value>The file is open in another program, so it could not be saved. Close it there and try again. The file was not changed.</value>
     <comment>Error files.locked.</comment>
   </data>
   <data name="Error_files_access_denied" xml:space="preserve">
-    <value>CrateEdit is not allowed to change this file. Check that it is not read-only and that you have permission to change it. The file was not changed.</value>
+    <value>This file may not be changed. Check that it is not read-only and that you have permission to change it. The file was not changed.</value>
     <comment>Error files.access-denied.</comment>
   </data>
   <data name="Error_files_not_found" xml:space="preserve">
-    <value>The file could not be found. It may have been moved or deleted, or its drive may be disconnected.</value>
+    <value>The file could not be found. It may have been moved or deleted, or the drive it is on may be disconnected.</value>
     <comment>Error files.not-found.</comment>
   </data>
   <data name="Error_files_disk_full" xml:space="preserve">
-    <value>The drive is full, so CrateEdit could not save the file. Free up some space and try again. The file was not changed.</value>
+    <value>The drive is full, so the file could not be saved. Free up some space and try again. The file was not changed.</value>
     <comment>Error files.disk-full.</comment>
   </data>
   <data name="Error_files_verification_failed" xml:space="preserve">
-    <value>CrateEdit checked the saved file and found a problem, so it kept the original. The file was not changed.</value>
+    <value>The saved file did not pass the final check, so the original was kept. The file was not changed.</value>
     <comment>Error files.verification-failed.</comment>
   </data>
   <data name="Error_files_io_error" xml:space="preserve">
-    <value>The file could not be read or written. Check that its drive is connected and try again.</value>
+    <value>The file could not be read or written. Check that the drive it is on is connected and try again.</value>
     <comment>Error files.io-error.</comment>
+  </data>
+  <data name="Error_files_locked_by" xml:space="preserve">
+    <value>The file is open in {0}, so it could not be saved. Close it there and try again. The file was not changed.</value>
+    <comment>Error files.locked when the programs holding the file are known. {0} is their name, e.g. rekordbox.</comment>
+  </data>
+  <data name="Error_recovery_unavailable" xml:space="preserve">
+    <value>The safety information for this change could not be stored on this computer, so the file was not changed. Check that the system drive has free space.</value>
+    <comment>Error recovery.unavailable.</comment>
   </data>
 </root>

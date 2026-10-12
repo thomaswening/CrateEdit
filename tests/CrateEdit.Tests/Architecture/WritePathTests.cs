@@ -4,7 +4,7 @@ using NetArchTest.Rules;
 namespace CrateEdit.Tests.Architecture;
 
 /// <summary>
-/// Guards the single write path (ADR-0003, REQ-052, REQ-075): audio files may only be written by
+/// Guards the single write path (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0003-staging-first.md">ADR-0003</see>, <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-052">REQ-052</see>, <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-075">REQ-075</see>): audio files may only be written by
 /// the apply pipeline. No other code, including the UI, may reference the tag writer.
 /// </summary>
 [Trait("Req", "REQ-052")]

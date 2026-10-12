@@ -2,12 +2,13 @@ using System.Globalization;
 using CrateEdit.App.Errors;
 using CrateEdit.App.Resources;
 using CrateEdit.App.Tags;
+using CrateEdit.Core.Files;
 using CrateEdit.Core.Results;
 using CrateEdit.Core.Tags;
 
 namespace CrateEdit.Tests.Results;
 
-/// <summary>Every error the application can report has a user-facing message in each language (REQ-123).</summary>
+/// <summary>Every error the application can report has a user-facing message in each language (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-123">REQ-123</see>).</summary>
 [Trait("Req", "REQ-123")]
 public class ErrorMessageTests
 {
@@ -70,6 +71,17 @@ public class ErrorMessageTests
         var error = new TagNotWritable(TagProblem.DuplicateFrame, FrameId: "TPE1") { Field = TagField.Artist };
 
         Assert.StartsWith("„Interpret“ ist in dieser Datei zweimal eingetragen", InCulture("de-DE", () => ErrorMessages.For(error)));
+    }
+
+    [Fact]
+    public void Locked_file_message_names_the_programs_when_known()
+    {
+        var named = new FileAccessError(FileProblem.Locked, "track.mp3") { LockedBy = ["rekordbox", "VLC media player"] };
+        var unnamed = new FileAccessError(FileProblem.Locked, "track.mp3");
+
+        Assert.StartsWith("The file is open in rekordbox, VLC media player,", InCulture("en-GB", () => ErrorMessages.For(named)));
+        Assert.StartsWith("Die Datei ist in rekordbox, VLC media player geöffnet", InCulture("de-DE", () => ErrorMessages.For(named)));
+        Assert.StartsWith("The file is open in another program,", InCulture("en-GB", () => ErrorMessages.For(unnamed)));
     }
 
     [Fact]

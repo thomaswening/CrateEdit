@@ -1,7 +1,7 @@
 namespace CrateEdit.Core.Tags.Writing;
 
 /// <summary>
-/// Everything needed to finish or undo a file write after a crash (ADR-0010, REQ-089, REQ-092).
+/// Everything needed to finish or undo a file write after a crash (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0010-safe-write-technique.md">ADR-0010</see>, <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-089">REQ-089</see>, <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-092">REQ-092</see>).
 /// The audio is never changed by a write, so the original file can be rebuilt from either
 /// version of the file plus the original tags kept here.
 /// </summary>
@@ -28,7 +28,7 @@ public sealed record RecoveryRecord(
     byte[] OriginalFileHash,
     byte[]? NewFileHash);
 
-/// <summary>Durable storage for recovery records, in local app data (REQ-013).</summary>
+/// <summary>Durable storage for recovery records, in local app data (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-013">REQ-013</see>).</summary>
 public interface IRecoveryStore
 {
     /// <summary>Saves or replaces the record durably: it survives a crash right after this returns.</summary>

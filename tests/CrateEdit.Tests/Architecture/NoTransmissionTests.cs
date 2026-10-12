@@ -4,7 +4,7 @@ using CrateEdit.Core;
 namespace CrateEdit.Tests.Architecture;
 
 /// <summary>
-/// Guards REQ-117: diagnostics must never be sent anywhere automatically. Until a feature
+/// Guards <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-117">REQ-117</see>: diagnostics must never be sent anywhere automatically. Until a feature
 /// legitimately needs the network, no CrateEdit assembly may reference networking libraries.
 /// </summary>
 [Trait("Req", "REQ-117")]

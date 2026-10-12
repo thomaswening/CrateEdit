@@ -6,7 +6,7 @@ using CrateEdit.Tests.Tags;
 namespace CrateEdit.Tests.Writing;
 
 /// <summary>
-/// Tests the safe write (ADR-0010) including simulated crashes after every step. A simulated
+/// Tests the safe write (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0010-safe-write-technique.md">ADR-0010</see>) including simulated crashes after every step. A simulated
 /// crash is an exception the writer does not catch, so none of its cleanup runs, as in a real
 /// crash; reconciliation must then always end with either the exact original or the exact new file.
 /// </summary>
@@ -104,6 +104,7 @@ public sealed class SafeFileWriterTests : IDisposable
 
         Assert.Equal(FileProblem.Locked, error.Problem);
         Assert.True(error.IsTransient);
+        Assert.NotEmpty(error.LockedBy);
         Assert.NotNull(error.Cause);
         Assert.Equal(_original, File.ReadAllBytes(_path));
         AssertClean();

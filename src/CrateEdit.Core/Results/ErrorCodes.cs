@@ -21,6 +21,8 @@ public static class ErrorCodes
     public const string FilesVerificationFailed = "files.verification-failed";
     public const string FilesIoError = "files.io-error";
 
+    public const string RecoveryUnavailable = "recovery.unavailable";
+
     /// <summary>All codes declared above.</summary>
     public static IReadOnlyList<string> All { get; } = typeof(ErrorCodes)
         .GetFields(BindingFlags.Public | BindingFlags.Static)

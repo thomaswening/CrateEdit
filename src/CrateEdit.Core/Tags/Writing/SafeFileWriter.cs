@@ -1,9 +1,10 @@
 using CrateEdit.Core.Files;
 using CrateEdit.Core.Results;
+using Serilog;
 
 namespace CrateEdit.Core.Tags.Writing;
 
-/// <summary>The steps of a safe write (ADR-0010), in order.</summary>
+/// <summary>The steps of a safe write (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0010-safe-write-technique.md">ADR-0010</see>), in order.</summary>
 public enum WriteStep
 {
     /// <summary>1. Recovery material for the original is stored durably.</summary>
@@ -23,94 +24,73 @@ public enum WriteStep
 }
 
 /// <summary>
-/// Writes tag changes to an MP3 file without ever leaving it half-written or lost (ADR-0010,
-/// REQ-088, REQ-089). The original is only replaced by a fully written and verified temporary
+/// Writes tag changes to an MP3 file without ever leaving it half-written or lost (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0010-safe-write-technique.md">ADR-0010</see>,
+/// <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-088">REQ-088</see>, <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-089">REQ-089</see>). The original is only replaced by a fully written and verified temporary
 /// file, and recovery material is kept until the result is verified, so
 /// <see cref="RecoveryReconciler"/> can finish or undo the write after a crash.
 /// </summary>
 public sealed class SafeFileWriter(IRecoveryStore recoveryStore)
 {
+    private static readonly ILogger Logger = Log.ForContext<SafeFileWriter>();
+
     /// <summary>Test hook: called after each step. Throwing from it simulates a crash at that point.</summary>
     internal Action<WriteStep>? AfterStep { get; init; }
 
-    /// <summary>
-    /// Applies <paramref name="changes"/> to the file at <paramref name="path"/>.
-    /// </summary>
+    /// <summary>Applies <paramref name="changes"/> to the file at <paramref name="path"/>.</summary>
     /// <returns>
-    /// Success; <see cref="TagNotWritable"/> if the tags cannot be written safely; or
-    /// <see cref="FileAccessError"/> if the file could not be read, written or verified. In every
-    /// failure case the original file is unchanged.
+    /// Success, or one of these errors, in which case the original file is unchanged:
+    /// <see cref="TagNotWritable"/> if the tags cannot be written safely;
+    /// <see cref="FileAccessError"/> if the file could not be read, written or verified;
+    /// <see cref="RecoveryUnavailable"/> if the recovery material could not be stored.
     /// </returns>
     public Result Write(string path, IReadOnlyDictionary<TagField, string?> changes)
     {
-        var tempPath = TempPathFor(path);
-        RecoveryRecord? record = null;
+        var write = new PendingWrite(path, TempPathFor(path), changes);
         try
         {
-            // 1. Recovery material.
-            var original = Mp3Layout.Read(path);
-            var originalValues = Mp3TagReader.Read(path).Values;
-            record = new RecoveryRecord(Guid.NewGuid(), path, tempPath, original.Length, original.Id3v2Bytes,
-                original.Id3v1Bytes, original.AudioHash, original.FileHash, NewFileHash: null);
-            recoveryStore.Save(record);
+            if (RecordRecovery(write) is { IsFailure: true } notRecorded)
+            {
+                return notRecorded;
+            }
+
             AfterStep?.Invoke(WriteStep.RecoveryRecorded);
 
-            // 2. Temporary file next to the original.
-            DeleteIfExists(tempPath);
-            var written = Mp3TagWriter.Rewrite(path, tempPath, changes);
-            if (written.IsFailure)
+            if (WriteTemp(write) is { IsFailure: true } notWritten)
             {
-                Discard(record);
-                return written.Error;
+                Discard(write);
+                return notWritten;
             }
 
             AfterStep?.Invoke(WriteStep.TempWritten);
 
-            // 3. Verify the temporary file before it replaces anything.
-            var temp = Mp3Layout.Read(tempPath);
-            if (!IsExpectedContent(tempPath, temp, original, originalValues, changes))
+            if (VerifyTemp(write) is { IsFailure: true } notVerified)
             {
-                Discard(record);
-                return new FileAccessError(FileProblem.VerificationFailed, path);
+                Discard(write);
+                return notVerified;
             }
 
-            record = record with { NewFileHash = temp.FileHash };
-            recoveryStore.Save(record);
             AfterStep?.Invoke(WriteStep.TempVerified);
 
-            // 4. Replace. Keeps the creation date and attributes on Windows; an atomic rename on macOS.
-            File.Replace(tempPath, path, destinationBackupFileName: null);
+            Replace(write);
             AfterStep?.Invoke(WriteStep.Replaced);
 
-            // 5. Verify the result, then the recovery material is no longer needed.
-            if (!Mp3Layout.HashFile(path).AsSpan().SequenceEqual(temp.FileHash))
+            if (VerifyResult(write) is { IsFailure: true } wrongResult)
             {
-                // Not what was verified: let reconciliation restore the original.
-                RecoveryReconciler.Reconcile(record, recoveryStore);
-                return new FileAccessError(FileProblem.VerificationFailed, path);
+                return wrongResult;
             }
 
             AfterStep?.Invoke(WriteStep.ResultVerified);
-            recoveryStore.Delete(record.Id);
+
+            DeleteRecoveryMaterial(write);
             return Result.Success;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            if (record is not null)
-            {
-                // The original may or may not have been replaced; reconciliation knows how to
-                // tell and either finishes the write or keeps the original. If it cannot run now
-                // (e.g. the file is still locked), the record stays for the next startup.
-                try
-                {
-                    RecoveryReconciler.Reconcile(record, recoveryStore);
-                }
-                catch (Exception retry) when (retry is IOException or UnauthorizedAccessException)
-                {
-                }
-            }
-
-            return FileAccessError.From(exception, path);
+            // A file operation on the audio file or the temporary file failed. The original may
+            // or may not have been replaced; reconciliation tells which and either finishes the
+            // write or keeps the original.
+            TryReconcile(write);
+            return ToFileError(exception, path);
         }
     }
 
@@ -118,36 +98,177 @@ public sealed class SafeFileWriter(IRecoveryStore recoveryStore)
     public static string TempPathFor(string path) =>
         Path.Combine(Path.GetDirectoryName(path)!, "." + Path.GetFileName(path) + ".crateedit-tmp");
 
+    /// <summary>Step 1: store everything needed to rebuild the original, before anything is written.</summary>
+    private Result RecordRecovery(PendingWrite write)
+    {
+        write.Original = Mp3Layout.Read(write.Path);
+        write.OriginalValues = Mp3TagReader.Read(write.Path).Values;
+        var record = new RecoveryRecord(Guid.NewGuid(), write.Path, write.TempPath, write.Original.Length,
+            write.Original.Id3v2Bytes, write.Original.Id3v1Bytes, write.Original.AudioHash, write.Original.FileHash,
+            NewFileHash: null);
+
+        if (SaveRecord(record) is { IsFailure: true } notSaved)
+        {
+            return notSaved;
+        }
+
+        write.Record = record;
+        return Result.Success;
+    }
+
+    /// <summary>Step 2: write the complete new file next to the original.</summary>
+    private static Result WriteTemp(PendingWrite write)
+    {
+        if (File.Exists(write.TempPath))
+        {
+            // Left over from an earlier interrupted write of this file; its record was resolved.
+            File.Delete(write.TempPath);
+        }
+
+        return Mp3TagWriter.Rewrite(write.Path, write.TempPath, write.Changes);
+    }
+
     /// <summary>
-    /// The temporary file must hold exactly the intended values, all other field values unchanged,
-    /// the identical audio, and an ID3v1 tag only if the original had one.
+    /// Step 3: the temporary file must hold exactly the intended values, all other field values
+    /// unchanged, the identical audio, and an ID3v1 tag only if the original had one. Its hash is
+    /// then recorded, so reconciliation can recognize it.
     /// </summary>
-    private static bool IsExpectedContent(string tempPath, Mp3Layout temp, Mp3Layout original, TagValues originalValues,
-        IReadOnlyDictionary<TagField, string?> changes)
+    private Result VerifyTemp(PendingWrite write)
     {
-        if (!temp.AudioHash.AsSpan().SequenceEqual(original.AudioHash) || (temp.Id3v1Bytes is null) != (original.Id3v1Bytes is null))
+        var original = write.Original!;
+        var temp = Mp3Layout.Read(write.TempPath);
+        var tags = Mp3TagReader.Read(write.TempPath);
+
+        var isExpected = temp.AudioHash.AsSpan().SequenceEqual(original.AudioHash)
+            && (temp.Id3v1Bytes is null) == (original.Id3v1Bytes is null)
+            && tags.CanWrite
+            && Enum.GetValues<TagField>().All(field => tags.Values[field] == ExpectedValue(write, field));
+        if (!isExpected)
         {
-            return false;
+            return new FileAccessError(FileProblem.VerificationFailed, write.Path);
         }
 
-        var tags = Mp3TagReader.Read(tempPath);
-        return tags.CanWrite && Enum.GetValues<TagField>().All(field =>
-            tags.Values[field] == (changes.TryGetValue(field, out var changed)
-                ? (string.IsNullOrEmpty(changed) ? null : changed)
-                : originalValues[field]));
-    }
-
-    private void Discard(RecoveryRecord record)
-    {
-        DeleteIfExists(record.TempPath);
-        recoveryStore.Delete(record.Id);
-    }
-
-    private static void DeleteIfExists(string path)
-    {
-        if (File.Exists(path))
+        write.NewFileHash = temp.FileHash;
+        var record = write.Record! with { NewFileHash = temp.FileHash };
+        if (SaveRecord(record) is { IsFailure: true } notSaved)
         {
-            File.Delete(path);
+            return notSaved;
         }
+
+        write.Record = record;
+        return Result.Success;
+    }
+
+    /// <summary>Step 4: keeps the creation date and attributes on Windows; an atomic rename on macOS.</summary>
+    private static void Replace(PendingWrite write) =>
+        File.Replace(write.TempPath, write.Path, destinationBackupFileName: null);
+
+    /// <summary>Step 5: the original path must now hold exactly the verified temporary file.</summary>
+    private Result VerifyResult(PendingWrite write)
+    {
+        if (Mp3Layout.HashFile(write.Path).AsSpan().SequenceEqual(write.NewFileHash))
+        {
+            return Result.Success;
+        }
+
+        // Not what was verified: let reconciliation restore the original.
+        TryReconcile(write);
+        return new FileAccessError(FileProblem.VerificationFailed, write.Path);
+    }
+
+    private static string? ExpectedValue(PendingWrite write, TagField field) =>
+        write.Changes.TryGetValue(field, out var changed)
+            ? (string.IsNullOrEmpty(changed) ? null : changed)
+            : write.OriginalValues![field];
+
+    private Result SaveRecord(RecoveryRecord record)
+    {
+        try
+        {
+            recoveryStore.Save(record);
+            return Result.Success;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return new RecoveryUnavailable { Cause = exception };
+        }
+    }
+
+    /// <summary>The write succeeded; failing to clean up must not turn it into a failure.</summary>
+    private void DeleteRecoveryMaterial(PendingWrite write)
+    {
+        try
+        {
+            recoveryStore.Delete(write.Record!.Id);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // The leftover record is resolved as "write completed" at the next start.
+            Logger.Warning(exception, "Could not delete recovery record {RecordId} after a successful write", write.Record!.Id);
+        }
+    }
+
+    /// <summary>Removes the temporary file and the record of a write that never touched the original.</summary>
+    private void Discard(PendingWrite write)
+    {
+        try
+        {
+            if (File.Exists(write.TempPath))
+            {
+                File.Delete(write.TempPath);
+            }
+
+            if (write.Record is { } record)
+            {
+                recoveryStore.Delete(record.Id);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Harmless: reconciliation at the next start sees the intact original and cleans up.
+            Logger.Warning(exception, "Could not clean up after a discarded write to {Path}", write.Path);
+        }
+    }
+
+    private void TryReconcile(PendingWrite write)
+    {
+        if (write.Record is not { } record)
+        {
+            return;
+        }
+
+        try
+        {
+            RecoveryReconciler.Reconcile(record, recoveryStore);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // E.g. the file is still locked. The record stays and is resolved at the next start.
+            Logger.Warning(exception, "Could not reconcile the write to {Path} now", write.Path);
+        }
+    }
+
+    private static FileAccessError ToFileError(Exception exception, string path)
+    {
+        var error = FileAccessError.From(exception, path);
+        return error.Problem == FileProblem.Locked ? error with { LockedBy = LockingProcesses.Find(path) } : error;
+    }
+
+    /// <summary>The state of one write as it moves through the steps.</summary>
+    private sealed class PendingWrite(string path, string tempPath, IReadOnlyDictionary<TagField, string?> changes)
+    {
+        public string Path { get; } = path;
+
+        public string TempPath { get; } = tempPath;
+
+        public IReadOnlyDictionary<TagField, string?> Changes { get; } = changes;
+
+        public Mp3Layout? Original { get; set; }
+
+        public TagValues? OriginalValues { get; set; }
+
+        public RecoveryRecord? Record { get; set; }
+
+        public byte[]? NewFileHash { get; set; }
     }
 }

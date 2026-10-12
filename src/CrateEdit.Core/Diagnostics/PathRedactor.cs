@@ -2,7 +2,7 @@ namespace CrateEdit.Core.Diagnostics;
 
 /// <summary>
 /// Removes personal information from diagnostic text by replacing the user's home directory
-/// with "~" (REQ-118), e.g. C:\Users\name\Music\track.mp3 becomes ~\Music\track.mp3.
+/// with "~" (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-118">REQ-118</see>), e.g. C:\Users\name\Music\track.mp3 becomes ~\Music\track.mp3.
 /// </summary>
 public sealed class PathRedactor
 {

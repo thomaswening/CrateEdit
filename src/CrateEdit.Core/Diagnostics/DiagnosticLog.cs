@@ -7,8 +7,8 @@ namespace CrateEdit.Core.Diagnostics;
 
 /// <summary>
 /// Local diagnostic logging for troubleshooting. Logs are written only to files in the
-/// application's data directory and are never transmitted anywhere (REQ-117); files older than
-/// 30 days are deleted (REQ-116) and the user's home directory is redacted (REQ-118).
+/// application's data directory and are never transmitted anywhere (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-117">REQ-117</see>); files older than
+/// 30 days are deleted (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-116">REQ-116</see>) and the user's home directory is redacted (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-118">REQ-118</see>).
 /// </summary>
 public static class DiagnosticLog
 {

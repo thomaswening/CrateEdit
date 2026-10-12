@@ -1,10 +1,11 @@
+using CrateEdit.Core.Files;
 using CrateEdit.Core.Results;
 using CrateEdit.Core.Tags.Id3;
 
 namespace CrateEdit.Core.Tags.Writing;
 
 /// <summary>
-/// Writes edited MP3 tags (REQ-088, REQ-130). Only the frames of the edited fields are rebuilt;
+/// Writes edited MP3 tags (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-088">REQ-088</see>, <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-130">REQ-130</see>). Only the frames of the edited fields are rebuilt;
 /// every other frame, the audio and anything after it are copied byte for byte. An existing
 /// ID3v1 tag is updated to match; none is ever added.
 /// </summary>
@@ -24,7 +25,7 @@ public static class Mp3TagWriter
     /// </summary>
     /// <returns>
     /// Success, or <see cref="TagNotWritable"/> if the tag or an edited frame cannot be written
-    /// safely; no destination file is created in that case. I/O failures throw (ADR-0009).
+    /// safely; no destination file is created in that case. I/O failures throw (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0009-result-pattern-and-typed-errors.md">ADR-0009</see>).
     /// </returns>
     public static Result Rewrite(string sourcePath, string destinationPath, IReadOnlyDictionary<TagField, string?> changes)
     {
@@ -59,7 +60,7 @@ public static class Mp3TagWriter
         using var destination = new FileStream(destinationPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         destination.Write(newTag);
         source.Position = audioStart;
-        CopyBytes(source, destination, audioEnd - audioStart);
+        StreamCopy.CopyBytes(source, destination, audioEnd - audioStart);
         if (hasId3v1)
         {
             destination.Write(Id3v1Tag.Apply(lastBytes, changes));
@@ -67,21 +68,5 @@ public static class Mp3TagWriter
 
         destination.Flush(flushToDisk: true);
         return Result.Success;
-    }
-
-    private static void CopyBytes(Stream source, Stream destination, long count)
-    {
-        var buffer = new byte[81920];
-        while (count > 0)
-        {
-            var read = source.Read(buffer, 0, (int)Math.Min(buffer.Length, count));
-            if (read == 0)
-            {
-                throw new EndOfStreamException("The source file ended unexpectedly.");
-            }
-
-            destination.Write(buffer, 0, read);
-            count -= read;
-        }
     }
 }

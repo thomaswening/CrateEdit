@@ -1,4 +1,5 @@
-using System.Security.Cryptography;
+using CrateEdit.Core.Files;
+using Serilog;
 
 namespace CrateEdit.Core.Tags.Writing;
 
@@ -16,14 +17,14 @@ public enum RecoveryOutcome
 
     /// <summary>
     /// Neither the original nor the new content could be confirmed, e.g. because another program
-    /// changed the file. Nothing was touched; the record is kept for the user to resolve (REQ-093).
+    /// changed the file. Nothing was touched; the record is kept for the user to resolve (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-093">REQ-093</see>).
     /// </summary>
     Unresolved,
 }
 
 /// <summary>
-/// Finishes or undoes writes that were interrupted, e.g. by a crash or a power loss (ADR-0010,
-/// REQ-092). Never leaves a file worse than it found it: when the situation is unclear, it does
+/// Finishes or undoes writes that were interrupted, e.g. by a crash or a power loss (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0010-safe-write-technique.md">ADR-0010</see>,
+/// <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-092">REQ-092</see>). Never leaves a file worse than it found it: when the situation is unclear, it does
 /// nothing and reports <see cref="RecoveryOutcome.Unresolved"/>.
 /// </summary>
 public static class RecoveryReconciler
@@ -38,7 +39,16 @@ public static class RecoveryReconciler
         if (outcome != RecoveryOutcome.Unresolved)
         {
             DeleteIfExists(record.TempPath);
-            store.Delete(record.Id);
+            try
+            {
+                store.Delete(record.Id);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // The file is already in its final state; reconciling the record again next time
+                // reaches the same outcome, so only the cleanup is postponed.
+                Log.ForContext(typeof(RecoveryReconciler)).Warning(exception, "Could not delete recovery record {RecordId}", record.Id);
+            }
         }
 
         return outcome;
@@ -106,7 +116,7 @@ public static class RecoveryReconciler
         {
             output.Write(record.OriginalId3v2Tag);
             input.Position = layout.AudioStart;
-            CopyBytes(input, output, layout.AudioLength);
+            StreamCopy.CopyBytes(input, output, layout.AudioLength);
             if (record.OriginalId3v1Tag is { } id3v1)
             {
                 output.Write(id3v1);
@@ -131,22 +141,6 @@ public static class RecoveryReconciler
         }
 
         return true;
-    }
-
-    private static void CopyBytes(Stream source, Stream destination, long count)
-    {
-        var buffer = new byte[81920];
-        while (count > 0)
-        {
-            var read = source.Read(buffer, 0, (int)Math.Min(buffer.Length, count));
-            if (read == 0)
-            {
-                throw new EndOfStreamException();
-            }
-
-            destination.Write(buffer, 0, read);
-            count -= read;
-        }
     }
 
     private static void DeleteIfExists(string path)

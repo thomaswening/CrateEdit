@@ -26,10 +26,13 @@ public enum FileProblem
 
 /// <summary>
 /// A file could not be read or written. Converted from .NET exceptions at the file-write
-/// boundary (ADR-0009); the original exception is kept in <see cref="Error.Cause"/> for the log.
+/// boundary (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0009-result-pattern-and-typed-errors.md">ADR-0009</see>); the original exception is kept in <see cref="Error.Cause"/> for the log.
 /// </summary>
 public sealed record FileAccessError(FileProblem Problem, string Path) : Error
 {
+    /// <summary>For <see cref="FileProblem.Locked"/>: the programs holding the file, if known. Shown to the user.</summary>
+    public IReadOnlyList<string> LockedBy { get; init; } = [];
+
     public override string Code => Problem switch
     {
         FileProblem.Locked => ErrorCodes.FilesLocked,
@@ -41,7 +44,7 @@ public sealed record FileAccessError(FileProblem Problem, string Path) : Error
         _ => throw new ArgumentOutOfRangeException(nameof(Problem)),
     };
 
-    /// <summary>A locked file may be released soon, so retrying makes sense (REQ-079).</summary>
+    /// <summary>A locked file may be released soon, so retrying makes sense (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-079">REQ-079</see>).</summary>
     public override bool IsTransient => Problem == FileProblem.Locked;
 
     /// <summary>Classifies an exception from a file operation on <paramref name="path"/>.</summary>

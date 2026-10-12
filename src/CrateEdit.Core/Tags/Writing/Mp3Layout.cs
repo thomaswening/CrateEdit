@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using CrateEdit.Core.Files;
 using CrateEdit.Core.Tags.Id3;
 
 namespace CrateEdit.Core.Tags.Writing;
@@ -33,7 +34,7 @@ internal sealed record Mp3Layout(long Length, byte[] Id3v2Bytes, byte[]? Id3v1By
 
         var audioLength = stream.Length - tagSize - (id3v1?.Length ?? 0);
         stream.Position = tagSize;
-        var audioHash = HashRange(stream, audioLength);
+        var audioHash = StreamCopy.HashBytes(stream, audioLength);
         stream.Position = 0;
         var fileHash = SHA256.HashData(stream);
 
@@ -44,24 +45,5 @@ internal sealed record Mp3Layout(long Length, byte[] Id3v2Bytes, byte[]? Id3v1By
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         return SHA256.HashData(stream);
-    }
-
-    private static byte[] HashRange(Stream stream, long count)
-    {
-        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        var buffer = new byte[81920];
-        while (count > 0)
-        {
-            var read = stream.Read(buffer, 0, (int)Math.Min(buffer.Length, count));
-            if (read == 0)
-            {
-                throw new EndOfStreamException();
-            }
-
-            hash.AppendData(buffer, 0, read);
-            count -= read;
-        }
-
-        return hash.GetHashAndReset();
     }
 }

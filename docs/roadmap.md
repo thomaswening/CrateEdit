@@ -16,7 +16,7 @@ Solution skeleton: `CrateEdit.App` (Avalonia + Material.Avalonia, CommunityToolk
 - Needs: nothing
 
 ### Phase 1: Tag layer and write spike
-Read and write the 9 logical fields on MP3 and WAV with CrateEdit's own frame-level tag editor (TagLib# failed the preservation spike, see ADR-0008), mapped to one consistent field model. Automated tests on real Rekordbox/Serato/Traktor-tagged files proving a write changes only the edited fields and preserves audio and all other frames (GEOB, cues, beatgrids). Spike the safe-write technique (temporary file + atomic replace, verification) on local disk, USB and a Google Drive mount.
+Read and write the 9 logical fields on MP3 and WAV with CrateEdit's own frame-level tag editor (TagLib# failed the preservation spike, see [ADR-0008](adr/0008-own-id3v2-frame-editor.md)), mapped to one consistent field model. Automated tests on real Rekordbox/Serato/Traktor-tagged files proving a write changes only the edited fields and preserves audio and all other frames (GEOB, cues, beatgrids). Spike the safe-write technique (temporary file + atomic replace, verification) on local disk, USB and a Google Drive mount.
 - Requirements: [REQ-003](requirements.md#req-003), [REQ-006](requirements.md#req-006), [REQ-007](requirements.md#req-007), [REQ-088](requirements.md#req-088), [REQ-089](requirements.md#req-089), [REQ-091](requirements.md#req-091), [REQ-130](requirements.md#req-130)
 - Resolves: [OPEN-C](requirements.md#open-c), [OPEN-D](requirements.md#open-d)
 - Needs: sample files from the user's collection (worked on as copies only)
