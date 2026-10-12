@@ -103,7 +103,7 @@ flowchart TB
 | **Synchronization** | Initial scan, startup reconciliation, runtime file watching, move/rename detection, unavailable-root handling, activity history. | Planned (Phase 3), identity rules depend on OPEN-F |
 | **Staging** | Staged edits per track and field, the values seen when staging (for conflict detection), staging timestamps, session undo/redo with grouped actions. | Planned (Phase 5) |
 | **Apply pipeline** | The only component that writes audio files: preflight checks, protection against concurrent modification, recovery material, safe write, verification, retry, cancellation, reconciliation after a crash. | Planned (Phases 6–8), write technique depends on OPEN-C |
-| **Tag access** | Maps the 9 logical fields to MP3 (ID3v2) and WAV tags, reads tags, and performs the low-level tag write on behalf of the apply pipeline. | Planned (Phase 1), WAV mapping depends on OPEN-D ([ADR-0005](adr/0005-taglibsharp.md)) |
+| **Tag access** | ([format guide](formats/id3.md)) Maps the 9 logical fields to MP3 (ID3v2) and WAV tags, reads tags, and performs the low-level tag write on behalf of the apply pipeline. Own frame-level ID3v2 editor: only edited frames are rebuilt, all others are copied as raw bytes, and tags that are not fully understood are refused. | MP3 read/write implemented; WAV depends on OPEN-D ([ADR-0008](adr/0008-own-id3v2-frame-editor.md)) |
 | **Local store** | SQLite database in the app data folder for the index, staging, pending flags, view state and recovery bookkeeping. | Planned (Phase 2) |
 | **Diagnostics** | Local daily log files, 30-day retention, home-folder redaction, no transmission. | Implemented |
 
@@ -180,15 +180,16 @@ Everything CrateEdit owns lives in the app data folder (`%LOCALAPPDATA%\CrateEdi
 | [0002](adr/0002-dotnet-solution-structure.md) | .NET 10 with a UI-independent core project | Accepted |
 | [0003](adr/0003-staging-first.md) | All edits are staged; files are written only on apply | Accepted |
 | [0004](adr/0004-sqlite-local-state.md) | SQLite in app data for all local state | Proposed |
-| [0005](adr/0005-taglibsharp.md) | TagLib# for tag reading and writing | Proposed, pending Phase 1 spike |
+| [0005](adr/0005-taglibsharp.md) | TagLib# for tag reading and writing | Superseded by 0008 |
 | [0006](adr/0006-gpl-license.md) | GPL-3.0 license | Accepted |
 | [0007](adr/0007-localization-and-text-matching.md) | Localization with resource files; central text-matching rules | Accepted |
+| [0008](adr/0008-own-id3v2-frame-editor.md) | Own frame-level ID3v2 editor instead of a tag library | Proposed |
 
 ## 9. Risks
 
 | Risk | Mitigation |
 |---|---|
-| A tag write damages proprietary DJ data (cues, beatgrids, GEOB) | Byte-level preservation tests on real tag frames (Phase 1) before any write path is used |
+| A tag write damages proprietary DJ data (cues, beatgrids, GEOB) | Own frame-level editor that copies non-edited frames as raw bytes ([ADR-0008](adr/0008-own-id3v2-frame-editor.md)); byte-level preservation tests on synthetic Serato/Traktor frames and real files; still to be confirmed with files analyzed by Serato or Traktor |
 | WAV tags written in a form DJ software does not read | Phase 1 spike and manual checks in each DJ application (OPEN-D) |
 | Atomic replace behaves differently on cloud-sync mounts | Spike on a real Google Drive mount (OPEN-C) |
 | macOS cannot enforce file locks | Expected; handled by the "protection unavailable" path (REQ-073) and the stale-value check |

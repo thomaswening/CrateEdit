@@ -1,6 +1,6 @@
 # CrateEdit: Verifiable Product Requirements
-Version: 0.5 draft | 12 October 2026
-Status: Adds localization and text handling (section 12). Open decisions are collected in section 13 (OPEN-C, OPEN-D, OPEN-F to OPEN-N). Supersedes v0.4.
+Version: 0.6 draft | 12 October 2026
+Status: Adds REQ-130 (minimal edits) and localization and text handling (section 12). Open decisions are collected in section 13 (OPEN-C, OPEN-D, OPEN-F to OPEN-N). Supersedes v0.4.
 
 ## Requirement conventions
 **SHALL** = mandatory for the stated release; **SHOULD** = preferred, with an acceptable documented exception; **COULD** = optional or future capability. Each requirement has a stable ID. Conditions are expressed as **WHEN … THEN …**, **IF … THEN …**, **BEFORE …**, **WHILE …**, or **AFTER …**. An implementation technique is not a product requirement unless explicitly stated. Items marked **OPEN** require a decision before they can be treated as acceptance criteria. **OUT OF SCOPE** marks a capability explicitly not required for the first release.
@@ -202,6 +202,8 @@ Status: Adds localization and text handling (section 12). Open decisions are col
 **REQ-087 — No rollback outside cancellation (OUT OF SCOPE).** A completed apply operation that was not cancelled SHALL NOT be subject to a separate retroactive rollback; reverting an already-fully-applied, uncancelled operation is out of scope for the first release.
 
 **REQ-088 — Safe writes (SHALL).** The application SHALL preserve audio and unrelated metadata — including proprietary tag frames used by Rekordbox, Serato and Traktor (e.g. cue points, beatgrids, hot cues, GEOB blocks) — and SHALL NOT knowingly leave a partially written or corrupted audio file as a successful result.
+
+**REQ-130 — Minimal edits (SHALL).** WHEN the application writes edited fields to a file, it SHALL change only the tag data that stores those fields (and the equivalent fields of an existing ID3v1 tag); all other tag frames, their order and the audio data SHALL remain byte-identical. IF a file's tag cannot be parsed completely enough to guarantee this, THEN the application SHALL refuse to write it and report why, leaving the file unchanged.
 
 **REQ-089 — Recoverability (SHALL).** BEFORE exposing an audio file to write risk, the application SHALL preserve sufficient recovery material to restore its pre-write state; it SHALL verify successful completion before discarding that material (subject to the REQ-085 exception during an unresolved cancellation).
 
