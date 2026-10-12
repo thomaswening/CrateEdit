@@ -17,7 +17,7 @@ The tag writer already produces a complete new file, copying the audio byte for 
 ## Decision
 Every file is written in five steps. Each step only starts after the previous one succeeded.
 
-1. **Record recovery material locally.** Save the file's original ID3v2 tag bytes, its original ID3v1 tag (if any), and its length and modification time in the app data folder, and record "write in progress" for this file. Together with the unchanged audio in either version of the file, this is enough to rebuild the original exactly.
+1. **Record recovery material locally.** Save the file's original bytes before and after the audio (for MP3: the ID3v2 tag and the ID3v1 tag, if any), together with hashes of the audio and of the whole file, in the app data folder, and record "write in progress" for this file. Together with the unchanged audio in either version of the file, this is enough to rebuild the original exactly.
 2. **Write a temporary file next to the original.** It is named `.<name>.crateedit-tmp` in the same folder, so the final replace is a rename within one folder and one volume. The temp file is flushed to disk.
 3. **Verify the temporary file before it replaces anything.** Re-read it from disk and check:
    - its tag parses;

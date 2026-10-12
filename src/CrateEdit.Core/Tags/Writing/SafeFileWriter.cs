@@ -36,7 +36,7 @@ public sealed class SafeFileWriter(IRecoveryStore recoveryStore)
     /// <summary>Test hook: called after each step. Throwing from it simulates a crash at that point.</summary>
     internal Action<WriteStep>? AfterStep { get; init; }
 
-    /// <summary>Applies <paramref name="changes"/> to the file at <paramref name="path"/>.</summary>
+    /// <summary>Applies <paramref name="changes"/> to the audio file at <paramref name="path"/>, in any supported format.</summary>
     /// <returns>
     /// Success, or one of these errors, in which case the original file is unchanged:
     /// <see cref="TagNotWritable"/> if the tags cannot be written safely;
@@ -45,7 +45,12 @@ public sealed class SafeFileWriter(IRecoveryStore recoveryStore)
     /// </returns>
     public Result Write(string path, IReadOnlyDictionary<TagField, string?> changes)
     {
-        var write = new PendingWrite(path, TempPathFor(path), changes);
+        if (TagFileFormats.For(path) is not { } format)
+        {
+            return new TagNotWritable(TagProblem.UnsupportedFormat);
+        }
+
+        var write = new PendingWrite(path, TempPathFor(path), changes, format);
         try
         {
             if (RecordRecovery(write) is { IsFailure: true } notRecorded)
@@ -101,10 +106,10 @@ public sealed class SafeFileWriter(IRecoveryStore recoveryStore)
     /// <summary>Step 1: store everything needed to rebuild the original, before anything is written.</summary>
     private Result RecordRecovery(PendingWrite write)
     {
-        write.Original = Mp3Layout.Read(write.Path);
-        write.OriginalValues = Mp3TagReader.Read(write.Path).Values;
+        write.Original = write.Format.ReadLayout(write.Path);
+        write.OriginalValues = write.Format.Read(write.Path).Values;
         var record = new RecoveryRecord(Guid.NewGuid(), write.Path, write.TempPath, write.Original.Length,
-            write.Original.Id3v2Bytes, write.Original.Id3v1Bytes, write.Original.AudioHash, write.Original.FileHash,
+            write.Original.Prefix, write.Original.Suffix, write.Original.AudioHash, write.Original.FileHash,
             NewFileHash: null);
 
         if (SaveRecord(record) is { IsFailure: true } notSaved)
@@ -125,22 +130,23 @@ public sealed class SafeFileWriter(IRecoveryStore recoveryStore)
             File.Delete(write.TempPath);
         }
 
-        return Mp3TagWriter.Rewrite(write.Path, write.TempPath, write.Changes);
+        return write.Format.Rewrite(write.Path, write.TempPath, write.Changes);
     }
 
     /// <summary>
     /// Step 3: the temporary file must hold exactly the intended values, all other field values
-    /// unchanged, the identical audio, and an ID3v1 tag only if the original had one. Its hash is
-    /// then recorded, so reconciliation can recognize it.
+    /// unchanged, and the identical audio. Its hash is then recorded, so reconciliation can
+    /// recognize it.
     /// </summary>
     private Result VerifyTemp(PendingWrite write)
     {
         var original = write.Original!;
-        var temp = Mp3Layout.Read(write.TempPath);
-        var tags = Mp3TagReader.Read(write.TempPath);
+        var temp = write.Format.ReadLayout(write.TempPath);
+        var tags = write.Format.Read(write.TempPath);
 
         var isExpected = temp.AudioHash.AsSpan().SequenceEqual(original.AudioHash)
-            && (temp.Id3v1Bytes is null) == (original.Id3v1Bytes is null)
+            && temp.AudioLength == original.AudioLength
+            && write.Format.IsConsistentRewrite(original, temp)
             && tags.CanWrite
             && Enum.GetValues<TagField>().All(field => tags.Values[field] == ExpectedValue(write, field));
         if (!isExpected)
@@ -166,7 +172,7 @@ public sealed class SafeFileWriter(IRecoveryStore recoveryStore)
     /// <summary>Step 5: the original path must now hold exactly the verified temporary file.</summary>
     private Result VerifyResult(PendingWrite write)
     {
-        if (Mp3Layout.HashFile(write.Path).AsSpan().SequenceEqual(write.NewFileHash))
+        if (AudioLayout.HashFile(write.Path).AsSpan().SequenceEqual(write.NewFileHash))
         {
             return Result.Success;
         }
@@ -255,7 +261,7 @@ public sealed class SafeFileWriter(IRecoveryStore recoveryStore)
     }
 
     /// <summary>The state of one write as it moves through the steps.</summary>
-    private sealed class PendingWrite(string path, string tempPath, IReadOnlyDictionary<TagField, string?> changes)
+    private sealed class PendingWrite(string path, string tempPath, IReadOnlyDictionary<TagField, string?> changes, ITagFileFormat format)
     {
         public string Path { get; } = path;
 
@@ -263,7 +269,9 @@ public sealed class SafeFileWriter(IRecoveryStore recoveryStore)
 
         public IReadOnlyDictionary<TagField, string?> Changes { get; } = changes;
 
-        public Mp3Layout? Original { get; set; }
+        public ITagFileFormat Format { get; } = format;
+
+        public AudioLayout? Original { get; set; }
 
         public TagValues? OriginalValues { get; set; }
 

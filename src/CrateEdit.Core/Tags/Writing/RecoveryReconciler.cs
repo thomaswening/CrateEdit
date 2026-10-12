@@ -61,7 +61,7 @@ public static class RecoveryReconciler
 
         if (File.Exists(target))
         {
-            var targetHash = Mp3Layout.HashFile(target);
+            var targetHash = AudioLayout.HashFile(target);
             if (record.NewFileHash is { } newHash && targetHash.AsSpan().SequenceEqual(newHash))
             {
                 return RecoveryOutcome.WriteCompleted;
@@ -79,7 +79,7 @@ public static class RecoveryReconciler
 
         // The target is missing: the replace was interrupted on a file system where it is not
         // atomic. A verified temporary file can simply be moved into place.
-        if (File.Exists(temp) && record.NewFileHash is { } verified && Mp3Layout.HashFile(temp).AsSpan().SequenceEqual(verified))
+        if (File.Exists(temp) && record.NewFileHash is { } verified && AudioLayout.HashFile(temp).AsSpan().SequenceEqual(verified))
         {
             File.Move(temp, target);
             return RecoveryOutcome.WriteCompleted;
@@ -95,10 +95,15 @@ public static class RecoveryReconciler
     /// </summary>
     private static bool TryRestoreFrom(string source, RecoveryRecord record)
     {
-        Mp3Layout layout;
+        if (TagFileFormats.For(record.TargetPath) is not { } format)
+        {
+            return false;
+        }
+
+        AudioLayout layout;
         try
         {
-            layout = Mp3Layout.Read(source);
+            layout = format.ReadLayout(source);
         }
         catch (EndOfStreamException)
         {
@@ -114,18 +119,15 @@ public static class RecoveryReconciler
         using (var output = new FileStream(rebuilt, FileMode.Create, FileAccess.Write, FileShare.None))
         using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            output.Write(record.OriginalId3v2Tag);
+            output.Write(record.OriginalPrefix);
             input.Position = layout.AudioStart;
             StreamCopy.CopyBytes(input, output, layout.AudioLength);
-            if (record.OriginalId3v1Tag is { } id3v1)
-            {
-                output.Write(id3v1);
-            }
+            output.Write(record.OriginalSuffix);
 
             output.Flush(flushToDisk: true);
         }
 
-        if (!Mp3Layout.HashFile(rebuilt).AsSpan().SequenceEqual(record.OriginalFileHash))
+        if (!AudioLayout.HashFile(rebuilt).AsSpan().SequenceEqual(record.OriginalFileHash))
         {
             File.Delete(rebuilt);
             return false;

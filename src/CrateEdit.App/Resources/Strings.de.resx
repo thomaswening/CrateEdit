@@ -82,4 +82,7 @@
   <data name="Error_recovery_unavailable" xml:space="preserve">
     <value>Die Sicherungsinformationen für diese Änderung konnten nicht auf diesem Computer gespeichert werden, daher wurde die Datei nicht verändert. Prüfe, ob auf dem Systemlaufwerk genug Speicherplatz frei ist.</value>
   </data>
+  <data name="Error_tags_unsupported_format" xml:space="preserve">
+    <value>Das Format der Datei wird nicht unterstützt, daher können ihre Tags nicht bearbeitet werden. Die Datei wurde nicht verändert.</value>
+  </data>
 </root>

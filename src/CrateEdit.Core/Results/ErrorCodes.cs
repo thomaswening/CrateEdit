@@ -8,6 +8,7 @@ namespace CrateEdit.Core.Results;
 /// </summary>
 public static class ErrorCodes
 {
+    public const string TagsUnsupportedFormat = "tags.unsupported-format";
     public const string TagsUnsupportedVersion = "tags.unsupported-version";
     public const string TagsUnsupportedFeature = "tags.unsupported-feature";
     public const string TagsMalformed = "tags.malformed";

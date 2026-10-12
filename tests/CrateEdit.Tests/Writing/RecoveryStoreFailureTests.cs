@@ -105,7 +105,7 @@ public sealed class RecoveryStoreFailureTests : IDisposable
         Directory.CreateDirectory(recoveryDir);
         var corrupt = Path.Combine(recoveryDir, Guid.NewGuid().ToString("N") + ".json");
         File.WriteAllText(corrupt, "{ this is not json");
-        _inner.Save(new RecoveryRecord(Guid.NewGuid(), _path, "tmp", 1, [], null, [], [], null));
+        _inner.Save(new RecoveryRecord(Guid.NewGuid(), _path, "tmp", 1, [], [], [], [], null));
 
         var records = _inner.LoadAll();
 

@@ -2,38 +2,26 @@ using CrateEdit.Core.Tags.Id3;
 
 namespace CrateEdit.Core.Tags;
 
-/// <summary>The tags read from an MP3 file.</summary>
-/// <param name="Values">The logical field values.</param>
-/// <param name="Id3Version">The ID3v2 major version (3 or 4), or null if the file has no ID3v2 tag.</param>
-/// <param name="WriteProblem">Null if CrateEdit can safely write this file's tags; otherwise why not.</param>
-public sealed record Mp3Tags(TagValues Values, int? Id3Version, TagNotWritable? WriteProblem)
-{
-    public bool CanWrite => WriteProblem is null;
-}
-
 /// <summary>
 /// Reads MP3 tags. Only the ID3v2 tag at the start and the last 128 bytes are read, so reading
 /// is fast even for large files. Never modifies the file.
 /// </summary>
 /// <remarks>
-/// A tag that cannot be written is still a successful read (reported in <see cref="Mp3Tags.WriteProblem"/>).
+/// A tag that cannot be written is still a successful read (reported in <see cref="FileTags.WriteProblem"/>).
 /// I/O failures (missing file, no access) are exceptions, converted into errors by the caller (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0009-result-pattern-and-typed-errors.md">ADR-0009</see>).
 /// </remarks>
 public static class Mp3TagReader
 {
-    public static Mp3Tags Read(string path)
+    public static FileTags Read(string path)
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         var tag = ReadId3v2(stream);
         if (tag is null)
         {
-            return new Mp3Tags(TagValues.Empty, null, null);
+            return new FileTags(TagValues.Empty, null);
         }
 
-        return new Mp3Tags(
-            tag.Problem is null ? Id3FieldMap.Read(tag.Frames, tag.Version) : TagValues.Empty,
-            tag.Version,
-            tag.Problem);
+        return new FileTags(tag.Problem is null ? Id3FieldMap.Read(tag.Frames, tag.Version) : TagValues.Empty, tag.Problem);
     }
 
     internal static Id3v2Tag? ReadId3v2(Stream stream)
