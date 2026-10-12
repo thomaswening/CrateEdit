@@ -23,6 +23,8 @@ jobs:
           global-json-file: global.json
       - name: Build
         run: dotnet build -c Release
+      - name: Requirement links in docs
+        run: dotnet run tools/RequirementLinks.cs -- --check
       # The native xUnit runner writes an XML report that includes the requirement tags.
       - name: Test
         run: dotnet tests/CrateEdit.Tests/bin/Release/net10.0/CrateEdit.Tests.dll -xml TestResults/results.xml

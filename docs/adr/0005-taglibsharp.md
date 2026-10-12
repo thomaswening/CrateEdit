@@ -4,7 +4,7 @@
 - **Date:** 2026-10-09
 
 ## Context
-CrateEdit must read and write 9 logical fields in MP3 and WAV files (REQ-003, REQ-007) while preserving all other data, especially proprietary frames written by Rekordbox, Serato and Traktor (REQ-088). WAV tagging conventions vary between DJ applications (OPEN-D).
+CrateEdit must read and write 9 logical fields in MP3 and WAV files ([REQ-003](../requirements.md#req-003), [REQ-007](../requirements.md#req-007)) while preserving all other data, especially proprietary frames written by Rekordbox, Serato and Traktor ([REQ-088](../requirements.md#req-088)). WAV tagging conventions vary between DJ applications ([OPEN-D](../requirements.md#open-d)).
 
 ## Decision
 Use **TagLib#** (`TagLibSharp`) for tag access, behind CrateEdit's own field-mapping layer so the library can be replaced if needed.
