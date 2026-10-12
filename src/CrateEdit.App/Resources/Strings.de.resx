@@ -23,12 +23,39 @@
     <value>Die Tags der Datei sind beschädigt oder haben ein unerwartetes Format. Die Datei wurde nicht verändert.</value>
   </data>
   <data name="Error_tags_encoded_frame" xml:space="preserve">
-    <value>Dieses Feld ist komprimiert oder verschlüsselt gespeichert und kann nicht bearbeitet werden. Die Datei wurde nicht verändert.</value>
+    <value>„{0}“ ist in dieser Datei in einem speziellen Format gespeichert, das CrateEdit nicht sicher bearbeiten kann. Die Datei wurde nicht verändert.</value>
   </data>
   <data name="Error_tags_duplicate_frame" xml:space="preserve">
-    <value>Dieses Feld ist mehrfach in der Datei gespeichert, daher ist unklar, welcher Wert gilt. Die Datei wurde nicht verändert.</value>
+    <value>„{0}“ ist in dieser Datei zweimal eingetragen, daher ist unklar, welcher Eintrag in anderen Programmen angezeigt wird. CrateEdit hat die Datei nicht verändert.</value>
   </data>
   <data name="Error_Unknown" xml:space="preserve">
     <value>Ein unerwartetes Problem ist aufgetreten ({0}).</value>
+  </data>
+  <data name="Field_Artist" xml:space="preserve">
+    <value>Interpret</value>
+  </data>
+  <data name="Field_Title" xml:space="preserve">
+    <value>Titel</value>
+  </data>
+  <data name="Field_Album" xml:space="preserve">
+    <value>Album</value>
+  </data>
+  <data name="Field_Genre" xml:space="preserve">
+    <value>Genre</value>
+  </data>
+  <data name="Field_Label" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="Field_Bpm" xml:space="preserve">
+    <value>BPM</value>
+  </data>
+  <data name="Field_Key" xml:space="preserve">
+    <value>Tonart</value>
+  </data>
+  <data name="Field_Comment" xml:space="preserve">
+    <value>Kommentar</value>
+  </data>
+  <data name="Field_Year" xml:space="preserve">
+    <value>Jahr</value>
   </data>
 </root>

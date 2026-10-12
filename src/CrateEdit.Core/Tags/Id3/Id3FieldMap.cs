@@ -69,16 +69,16 @@ internal static class Id3FieldMap
         var frame = frames[index];
         if (frame.HasFormatFlags(version))
         {
-            return new TagNotWritable(TagProblem.EncodedFrame, frame.Id, Version: version);
+            return new TagNotWritable(TagProblem.EncodedFrame, frame.Id, Version: version) { Field = field };
         }
 
         if (field != TagField.Comment && frames.Count(f => f.Id == frame.Id) > 1)
         {
-            return new TagNotWritable(TagProblem.DuplicateFrame, frame.Id, Version: version);
+            return new TagNotWritable(TagProblem.DuplicateFrame, frame.Id, Version: version) { Field = field };
         }
 
         return ReadFrameValue(frame, field, version) is null
-            ? new TagNotWritable(TagProblem.Malformed, frame.Id, Version: version)
+            ? new TagNotWritable(TagProblem.Malformed, frame.Id, Version: version) { Field = field }
             : null;
     }
 

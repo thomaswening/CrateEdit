@@ -30,6 +30,9 @@ public enum TagProblem
 /// <param name="Version">The ID3v2 major version of the tag, if known. For logs.</param>
 public sealed record TagNotWritable(TagProblem Problem, string? FrameId = null, long? Offset = null, int? Version = null) : Error
 {
+    /// <summary>The field the user tried to edit, for problems with a single field's frame. Shown to the user.</summary>
+    public TagField? Field { get; init; }
+
     public override string Code => Problem switch
     {
         TagProblem.UnsupportedVersion => ErrorCodes.TagsUnsupportedVersion,

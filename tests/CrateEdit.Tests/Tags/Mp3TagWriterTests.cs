@@ -274,7 +274,8 @@ public class Mp3TagWriterTests : Mp3TagTestBase
         var compressed = Frames.Text("TPE1", "Artist") with { Flags = 0x0008 };
         var source = Mp3Fixture.Build(4, [compressed, Frames.Text("TIT2", "Title")]);
 
-        Assert.Equal("TPE1", AssertRefused(source, TagField.Artist, TagProblem.EncodedFrame).FrameId);
+        var error = AssertRefused(source, TagField.Artist, TagProblem.EncodedFrame);
+        Assert.Equal(("TPE1", TagField.Artist), (error.FrameId, error.Field));
         var edited = Edit(source, TagField.Title, "New title");
         Assert.True(compressed.SameBytesAs(Mp3Fixture.Parse(edited).Frames[0]));
     }
@@ -285,7 +286,8 @@ public class Mp3TagWriterTests : Mp3TagTestBase
     {
         var source = Mp3Fixture.Build(3, [Frames.Text("TPE1", "One", encoding: 0), Frames.Text("TPE1", "Two", encoding: 0)]);
 
-        Assert.Equal("TPE1", AssertRefused(source, TagField.Artist, TagProblem.DuplicateFrame).FrameId);
+        var error = AssertRefused(source, TagField.Artist, TagProblem.DuplicateFrame);
+        Assert.Equal(("TPE1", TagField.Artist), (error.FrameId, error.Field));
         Assert.True(Read(source).CanWrite);
     }
 

@@ -29,15 +29,51 @@
     <comment>Error tags.malformed.</comment>
   </data>
   <data name="Error_tags_encoded_frame" xml:space="preserve">
-    <value>This field is stored compressed or encrypted and cannot be edited. The file was not changed.</value>
-    <comment>Error tags.encoded-frame.</comment>
+    <value>CrateEdit cannot change the {0} of this file because it is stored in a special format that CrateEdit cannot edit safely. The file was not changed.</value>
+    <comment>Error tags.encoded-frame. {0} is the field name as shown in the table, e.g. Artist.</comment>
   </data>
   <data name="Error_tags_duplicate_frame" xml:space="preserve">
-    <value>This field is stored more than once in the file, so it is unclear which value is used. The file was not changed.</value>
-    <comment>Error tags.duplicate-frame.</comment>
+    <value>This file contains the {0} twice, so it is unclear which one other programs show. CrateEdit did not change the file.</value>
+    <comment>Error tags.duplicate-frame. {0} is the field name as shown in the table, e.g. Artist.</comment>
   </data>
   <data name="Error_Unknown" xml:space="preserve">
     <value>An unexpected problem occurred ({0}).</value>
     <comment>Fallback for an error code without a message. {0} is the error code.</comment>
+  </data>
+  <data name="Field_Artist" xml:space="preserve">
+    <value>Artist</value>
+    <comment>Name of a metadata field, as shown in table column headers and messages.</comment>
+  </data>
+  <data name="Field_Title" xml:space="preserve">
+    <value>Title</value>
+    <comment>Name of a metadata field, as shown in table column headers and messages.</comment>
+  </data>
+  <data name="Field_Album" xml:space="preserve">
+    <value>Album</value>
+    <comment>Name of a metadata field, as shown in table column headers and messages.</comment>
+  </data>
+  <data name="Field_Genre" xml:space="preserve">
+    <value>Genre</value>
+    <comment>Name of a metadata field, as shown in table column headers and messages.</comment>
+  </data>
+  <data name="Field_Label" xml:space="preserve">
+    <value>Label</value>
+    <comment>Name of a metadata field, as shown in table column headers and messages.</comment>
+  </data>
+  <data name="Field_Bpm" xml:space="preserve">
+    <value>BPM</value>
+    <comment>Name of a metadata field, as shown in table column headers and messages.</comment>
+  </data>
+  <data name="Field_Key" xml:space="preserve">
+    <value>Key</value>
+    <comment>Name of a metadata field, as shown in table column headers and messages.</comment>
+  </data>
+  <data name="Field_Comment" xml:space="preserve">
+    <value>Comment</value>
+    <comment>Name of a metadata field, as shown in table column headers and messages.</comment>
+  </data>
+  <data name="Field_Year" xml:space="preserve">
+    <value>Year</value>
+    <comment>Name of a metadata field, as shown in table column headers and messages.</comment>
   </data>
 </root>

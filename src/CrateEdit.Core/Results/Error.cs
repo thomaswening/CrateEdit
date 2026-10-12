@@ -13,4 +13,10 @@ public abstract record Error
 
     /// <summary>True if trying again later may succeed (e.g. a file briefly locked by another program).</summary>
     public virtual bool IsTransient => false;
+
+    /// <summary>
+    /// The exception this error was converted from, if any (e.g. an <see cref="IOException"/>
+    /// caught at the apply boundary). Kept for diagnostics: it is logged, never shown to the user.
+    /// </summary>
+    public Exception? Cause { get; init; }
 }

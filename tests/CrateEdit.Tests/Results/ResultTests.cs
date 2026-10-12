@@ -58,9 +58,19 @@ public class ResultTests
     }
 
     [Fact]
+    public void Error_keeps_the_exception_it_was_converted_from_for_the_log()
+    {
+        var cause = new IOException("The process cannot access the file.");
+        var error = new TestError(Transient: true) { Cause = cause };
+
+        Assert.Same(cause, error.Cause);
+        Assert.Contains("The process cannot access the file.", error.ToString());
+    }
+
+    [Fact]
     public void Errors_are_logged_with_all_details()
     {
-        Assert.Equal("Failure: TestError { Code = test.error, IsTransient = True, Transient = True }",
+        Assert.Equal("Failure: TestError { Code = test.error, IsTransient = True, Cause = , Transient = True }",
             ((Result)new TestError(Transient: true)).ToString());
     }
 }

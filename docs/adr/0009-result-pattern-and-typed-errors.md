@@ -27,14 +27,16 @@ Failures are handled in three categories:
 - **`Error`:** an abstract record. Each concrete error has:
   - a stable, language-independent `Code` (e.g. `tags.malformed`);
   - `IsTransient`, used by retry logic;
-  - typed details for logs (e.g. frame id, byte offset).
+  - typed details for logs (e.g. frame id, byte offset);
+  - optionally, the `Cause`: the exception it was converted from at a boundary. The cause is kept for the log and never shown to the user.
 
   The record's generated `ToString()` is what gets logged.
 - **`Result` and `Result<T>`:** a success or an `Error`. Values and errors convert implicitly, so methods simply `return value;` or `return new SomeError(...);`. Callers check `IsFailure`, and the compiler then knows `Error` is not null. Reading `Value` from a failure throws, because it is a programming error. The types are written by hand, about 50 lines, with no library.
 - **`ErrorCodes`:** the catalog of all codes. A new error code is added there, never as an ad-hoc string.
 
 **Turning errors into behavior:**
-- **User messages:** `ErrorMessages` in the app looks up the resource `Error_<code>` (dots and dashes replaced by underscores) in the current UI language. Messages contain no technical details. Tests fail if any code lacks an English or German message.
+- **User messages:** `ErrorMessages` in the app looks up the resource `Error_<code>` (dots and dashes replaced by underscores) in the current UI language. Messages are written in the user's terms and may name user-facing details through placeholders, e.g. the field name as shown in the table ("Artist" / „Interpret“). They contain no technical details such as frame ids, offsets or exception text. Tests fail if any code lacks an English or German message.
+- **Why string codes, not one enum:** each area owns its namespaced codes (`tags.*`, `files.*`) without editing a shared type. Text stays stable in logs and saved summaries. Codes map directly to resource keys. Within an area, enums are still used where exhaustive switches help (e.g. `TagProblem`).
 - **Logs:** errors are logged with all details, in English (REQ-129).
 - **Retry and grouping:** the apply pipeline uses `IsTransient` and `Code` (Phase 6). Handlers are explicit components called at known places, not a global error bus.
 

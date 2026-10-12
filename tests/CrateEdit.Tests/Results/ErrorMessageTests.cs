@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrateEdit.App.Errors;
 using CrateEdit.App.Resources;
+using CrateEdit.App.Tags;
 using CrateEdit.Core.Results;
 using CrateEdit.Core.Tags;
 
@@ -47,11 +48,61 @@ public class ErrorMessageTests
     }
 
     [Fact]
-    public void Message_contains_no_technical_details()
+    public void Message_names_the_field_as_shown_in_the_ui_and_no_technical_details()
     {
-        var message = ErrorMessages.For(new TagNotWritable(TagProblem.EncodedFrame, FrameId: "TPE1", Offset: 120));
+        var error = new TagNotWritable(TagProblem.EncodedFrame, FrameId: "TPE1", Offset: 120)
+        {
+            Field = TagField.Artist,
+            Cause = new IOException("Sharing violation at 0x8007"),
+        };
 
+        var message = InCulture("en-GB", () => ErrorMessages.For(error));
+
+        Assert.Contains("Artist", message);
         Assert.DoesNotContain("TPE1", message);
         Assert.DoesNotContain("120", message);
+        Assert.DoesNotContain("Sharing violation", message);
+    }
+
+    [Fact]
+    public void German_message_uses_the_german_field_name()
+    {
+        var error = new TagNotWritable(TagProblem.DuplicateFrame, FrameId: "TPE1") { Field = TagField.Artist };
+
+        Assert.StartsWith("„Interpret“ ist in dieser Datei zweimal eingetragen", InCulture("de-DE", () => ErrorMessages.For(error)));
+    }
+
+    [Fact]
+    public void Missing_detail_falls_back_to_the_generic_message()
+    {
+        var message = InCulture("en-GB", () => ErrorMessages.For(new TagNotWritable(TagProblem.DuplicateFrame)));
+
+        Assert.Contains(ErrorCodes.TagsDuplicateFrame, message);
+    }
+
+    public static TheoryData<TagField, string> FieldsAndLanguages() =>
+        new(from field in Enum.GetValues<TagField>() from language in new[] { "en", "de" } select (field, language));
+
+    [Theory]
+    [MemberData(nameof(FieldsAndLanguages))]
+    public void Every_field_has_a_display_name(TagField field, string language)
+    {
+        var name = Strings.ResourceManager.GetString(FieldNames.ResourceKey(field), CultureInfo.GetCultureInfo(language));
+
+        Assert.False(string.IsNullOrWhiteSpace(name), $"No {language} name for field {field}.");
+    }
+
+    private static string InCulture(string culture, Func<string> action)
+    {
+        var original = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            return action();
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
     }
 }
