@@ -70,13 +70,49 @@ This is a complete, small ID3v2.4 tag: a title, a BPM, a Serato GEOB frame and p
 - **Tag size:** the number of bytes *after* the header, frames plus padding. Total tag length = 10 + size (+ 10 if there is a footer). `Id3v2Header.TotalSizeBytes` computes this.
 
 ### Synchsafe integers: `Synchsafe`
-Sizes in the header (and frame sizes in v2.4) use only the lower 7 bits of each byte, so the top bit is always 0. This way no size byte can be `0xFF`, and a player scanning for audio can never mistake a size field for a sync word.
+Sizes in the tag header (and frame sizes in v2.4) use only the lower 7 bits of each byte. The top bit (`0x80`) is always 0. This way no size byte can be `0xFF`, and a player scanning for audio can never mistake a size field for a sync word. A byte ≥ `0x80` in a synchsafe field is invalid; `Synchsafe.IsValid` checks that no byte has its top bit set.
+
+**Stored form and value are different.** The zero bits exist only on disk. To get the number, they are dropped and the remaining 7-bit groups are packed together. Example: a size field with the bytes `00 35 7D 7B`:
 
 ```
-00 00 00 77  →  (0x00 << 21) | (0x00 << 14) | (0x00 << 7) | 0x77  =  119
+on disk:  0|0000000  0|0110101  0|1111101  0|1111011     top bits are always 0
+             └──┬──┘    └──┬──┘    └──┬──┘    └──┬──┘
+value:       0000000    0110101    1111101    1111011    = 883,067 (28 bits, no gaps)
 ```
 
-A byte ≥ `0x80` in a synchsafe field is invalid. `Synchsafe.IsValid` checks that no byte has its top bit set.
+Read as an ordinary 32-bit number, the same bytes would give 3,505,531, because the zero bits would stay in the middle. The parser must know which format a field uses: the tag header is always synchsafe, frame sizes are synchsafe in v2.4 but ordinary integers in v2.3.
+
+**Decoding with shifts (`Synchsafe.Read`):**
+
+```csharp
+(bytes[0] << 21) | (bytes[1] << 14) | (bytes[2] << 7) | bytes[3]
+```
+
+- `x << n` moves all bits of `x` n places to the left and fills the right with zeros.
+- The shifts are 7 apart, so each byte moves into its own 7-bit slot. Its top 0 lands on the lowest data bit of the next-higher byte, and the zeros the shift adds on the right are filled by the lower bytes.
+- `|` (bitwise OR) merges the slots. At every position only one byte contributes real data, so the leftover zeros never change the result.
+
+```
+bytes[3]  << 0  :                        0 1111011
+bytes[2]  << 7  :                0 1111101 0000000
+bytes[1]  << 14 :        0 0110101 0000000 0000000
+bytes[0]  << 21 :  0000000 0000000 0000000 0000000
+OR              :  0000000 0110101 1111101 1111011   = 883,067
+```
+
+An ordinary 32-bit number is decoded the same way with shifts of 24, 16, 8 and 0. Those keep all 8 bits of each byte side by side, including the zeros.
+
+**Why a byte can be shifted by 21.** In C#, bit and arithmetic operators never work on `byte`: both operands are first converted to `int` (32 bits). `bytes[1] << 14` is really `((int)bytes[1]) << 14`, a 32-bit result with plenty of room. The array itself is not changed.
+
+**Encoding (`Synchsafe.Write`)** goes the other way:
+
+```csharp
+destination[0] = (byte)((value >> 21) & 0x7F);
+```
+
+- `>> 21` moves the wanted 7 bits down to the bottom.
+- `& 0x7F` (`0111 1111`) keeps only those 7 bits, so the top bit becomes 0.
+- The `(byte)` cast is required because `int` to `byte` could lose data. Here it cannot, since `& 0x7F` already reduced the value to 7 bits.
 
 ### Frames: `Id3v2Frame`
 After the header, the tag is a sequence of **frames**. A frame is one labelled box of data. Each frame has a 10-byte **frame header** followed by its **body**:
