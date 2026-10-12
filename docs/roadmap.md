@@ -11,8 +11,8 @@ Draft | 9 October 2026 | Based on requirements v0.4
 ## Milestone 1 — Read-only collection browser
 
 ### Phase 0: Foundations
-Solution skeleton: `CrateEdit.App` (Avalonia + Material.Avalonia, CommunityToolkit.Mvvm), `CrateEdit.Core` (domain, no UI dependency), `CrateEdit.Tests`. CI on GitHub Actions building and testing on Windows and macOS. App-data location, local diagnostic logging with 30-day cleanup, command/shortcut registry with default bindings.
-- Requirements: REQ-116, REQ-117, REQ-118 (logging basics)
+Solution skeleton: `CrateEdit.App` (Avalonia + Material.Avalonia, CommunityToolkit.Mvvm), `CrateEdit.Core` (domain, no UI dependency), `CrateEdit.Tests`. CI on GitHub Actions building and testing on Windows and macOS. App-data location, local diagnostic logging with 30-day cleanup, command/shortcut registry with default bindings, English/German UI resources and text-matching rules.
+- Requirements: REQ-108 (groundwork), REQ-109, REQ-116, REQ-117, REQ-118, REQ-123 to REQ-129
 - Needs: nothing
 
 ### Phase 1: Tag layer and write spike

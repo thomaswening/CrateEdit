@@ -1,3 +1,4 @@
+using System.Globalization;
 using Serilog;
 using Serilog.Core;
 using Serilog.Formatting.Display;
@@ -21,7 +22,7 @@ public static class DiagnosticLog
         LogRetention.Prune(paths.LogDirectory, timeProvider.GetUtcNow());
 
         var formatter = new RedactingFormatter(
-            new MessageTemplateTextFormatter(OutputTemplate, formatProvider: null), redactor);
+            new MessageTemplateTextFormatter(OutputTemplate, CultureInfo.InvariantCulture), redactor);
 
         return new LoggerConfiguration()
             .MinimumLevel.Information()

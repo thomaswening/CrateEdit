@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.LogicalTree;
 using CrateEdit.App;
 using CrateEdit.App.Commands;
+using CrateEdit.App.Resources;
 using CrateEdit.App.Services;
 using CrateEdit.Core;
 using CrateEdit.Core.Commands;
@@ -36,7 +37,7 @@ public class MainWindowTests
         window.Show();
 
         Assert.Equal(AppInfo.Name, window.Title);
-        Assert.Equal("No collection loaded.", window.FindControl<TextBlock>("StatusBar")!.Text);
+        Assert.Equal(Strings.Status_NoCollection, window.FindControl<TextBlock>("StatusBar")!.Text);
     }
 
     [AvaloniaFact]

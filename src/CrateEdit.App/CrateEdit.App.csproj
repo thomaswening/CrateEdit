@@ -12,6 +12,14 @@
     <PackageReference Include="Material.Avalonia" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Update="Resources\Strings.resx"
+                      StronglyTypedLanguage="CSharp"
+                      StronglyTypedNamespace="CrateEdit.App.Resources"
+                      StronglyTypedClassName="Strings"
+                      StronglyTypedFileName="$(IntermediateOutputPath)Strings.Designer.cs"
+                      PublicClass="true" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\CrateEdit.Core\CrateEdit.Core.csproj" />
   </ItemGroup>
 </Project>
