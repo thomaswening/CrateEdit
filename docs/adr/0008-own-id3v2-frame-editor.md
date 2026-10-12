@@ -28,7 +28,7 @@ CrateEdit reads and writes ID3v2.3 and ID3v2.4 tags with its own small frame-lev
 - The writer never modifies its source file. It writes a complete new file; replacing the original safely is the job of the apply pipeline (Phase 1 safe-write slice).
 
 ## Alternatives considered
-- **TagLib# (ADR-0005) or ATL.NET:** rejected because of the spike results.
+- **TagLib# ([ADR-0005](0005-taglibsharp.md)) or ATL.NET:** rejected because of the spike results.
 - **A library for reading and own code for writing:** reading and writing would disagree on which frame holds a field (e.g. which comment), and edits would be based on values the writer did not read itself.
 - **Patching a library to preserve raw frames:** a fork that would have to be maintained, and every library update would need re-verification.
 

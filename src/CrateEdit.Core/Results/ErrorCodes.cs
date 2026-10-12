@@ -14,6 +14,15 @@ public static class ErrorCodes
     public const string TagsEncodedFrame = "tags.encoded-frame";
     public const string TagsDuplicateFrame = "tags.duplicate-frame";
 
+    public const string FilesLocked = "files.locked";
+    public const string FilesAccessDenied = "files.access-denied";
+    public const string FilesNotFound = "files.not-found";
+    public const string FilesDiskFull = "files.disk-full";
+    public const string FilesVerificationFailed = "files.verification-failed";
+    public const string FilesIoError = "files.io-error";
+
+    public const string RecoveryUnavailable = "recovery.unavailable";
+
     /// <summary>All codes declared above.</summary>
     public static IReadOnlyList<string> All { get; } = typeof(ErrorCodes)
         .GetFields(BindingFlags.Public | BindingFlags.Static)

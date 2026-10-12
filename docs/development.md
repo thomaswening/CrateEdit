@@ -34,14 +34,19 @@ Every new error code goes into `ErrorCodes` and needs an `Error_<code>` message 
 - No hard-coded UI text: every string goes into `src/CrateEdit.App/Resources/Strings.resx` (English) **and** `Strings.de.resx` (German) in the same PR. Tests fail on missing translations and on literal text in XAML.
 - Text comparisons (search, sorting, equality of names and paths) use `CrateEdit.Core.Text.TextMatching`, never ad-hoc `string.Equals` or `Contains`.
 
-## Requirement links
-Every mention of a requirement or open decision in the docs links to its definition in [requirements.md](requirements.md), e.g. `[REQ-088](requirements.md#req-088)`. New requirements get an anchor (`<a id="req-131"></a>`) at the start of their definition. You don't need to write either by hand: run
+## Requirement and decision links
+Every mention of a requirement (`REQ-NNN`), open decision (`OPEN-X`) or architecture decision record (`ADR-NNNN`) links to its definition:
+- **In Markdown docs:** relative links, e.g. `[REQ-088](requirements.md#req-088)`. New requirements get an anchor (`<a id="req-131"></a>`) at the start of their definition.
+- **In XML documentation comments** (`///` in `src/` and `tests/`): `<see href="...">` links to the file on GitHub, so they can be followed from the IDE.
+- **In pull request descriptions:** absolute GitHub links, e.g. `[REQ-088](https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-088)`.
+
+You don't need to write docs or code links by hand: run
 
 ```bash
 dotnet run tools/RequirementLinks.cs -- --fix
 ```
 
-and it adds missing anchors and links. CI runs the same tool with `--check` and fails on unlinked mentions, links to unknown requirements, and mentions of requirements that do not exist.
+and it adds missing anchors and links. CI runs the same tool with `--check` and fails on unlinked mentions, links to unknown requirements or decision records, and mentions of ones that do not exist.
 
 ## Architecture documentation
 - [architecture.md](architecture.md) is kept current: a PR that adds or changes a building block, dependency rule or key concept updates it in the same PR.
@@ -71,6 +76,8 @@ Tests that need real files (e.g. `RealFileTests`) read them from the folder in t
 ```bash
 CRATEEDIT_SAMPLES=/path/to/sample/mp3s dotnet test -c Release --filter "FullyQualifiedName~RealFile"
 ```
+
+Set `CRATEEDIT_WRITE_DIR` as well to run the safe-write tests on specific storage, e.g. a folder on a USB stick or on the Google Drive mount. The tests create and remove their own subfolder there.
 
 ### Requirements traceability
 - CI produces a traceability report listing every requirement, the tests tagged with it, and a status: **Passing**, **Failing**, **Manual** or **Not covered**. It appears in each CI job's summary and in the `test-results-<os>` artifact.

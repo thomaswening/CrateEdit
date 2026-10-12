@@ -2,7 +2,7 @@ using CrateEdit.Core.Results;
 
 namespace CrateEdit.Core.Tags;
 
-/// <summary>Why a file's tags cannot be written safely (REQ-130). The file is never changed in that case.</summary>
+/// <summary>Why a file's tags cannot be written safely (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-130">REQ-130</see>). The file is never changed in that case.</summary>
 public enum TagProblem
 {
     /// <summary>A tag version CrateEdit cannot edit, e.g. ID3v2.2.</summary>

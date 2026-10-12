@@ -4,7 +4,7 @@ using System.Xml.Linq;
 namespace CrateEdit.Tests.Localization;
 
 /// <summary>
-/// Guards REQ-123: every user-facing string comes from resources, and every supported
+/// Guards <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-123">REQ-123</see>: every user-facing string comes from resources, and every supported
 /// language translates every string.
 /// </summary>
 [Trait("Req", "REQ-123")]
@@ -49,6 +49,22 @@ public partial class TranslationTests
             Assert.True(value.Contains('_') == translated[key].Contains('_'),
                 $"'{key}': access key marker '_' must be present in both English and '{language}'.");
         }
+    }
+
+    [Fact]
+    public void Texts_do_not_contain_the_application_name()
+    {
+        // The name may change and users know which application is talking. The window title
+        // comes from AppInfo.Name instead.
+        var files = new[] { NeutralResourceFile }
+            .Concat(SupportedTranslations.Select(language => Path.ChangeExtension(NeutralResourceFile, $".{language}.resx")));
+        var offending =
+            from file in files
+            from entry in ReadEntries(file)
+            where entry.Value.Contains("CrateEdit", StringComparison.OrdinalIgnoreCase)
+            select $"{Path.GetFileName(file)}: {entry.Key}";
+
+        Assert.Empty(offending);
     }
 
     [Fact]

@@ -10,7 +10,7 @@ using CrateEdit.Core.Commands;
 
 namespace CrateEdit.Tests.Localization;
 
-/// <summary>The UI follows the display language, with English as fallback (REQ-123, REQ-124).</summary>
+/// <summary>The UI follows the display language, with English as fallback (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-123">REQ-123</see>, <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-124">REQ-124</see>).</summary>
 public class LanguageSelectionTests
 {
     private sealed class NoShell : IShellService

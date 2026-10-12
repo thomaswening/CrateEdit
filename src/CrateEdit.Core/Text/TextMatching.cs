@@ -15,21 +15,21 @@ public static class TextMatching
 
     /// <summary>
     /// True if <paramref name="text"/> contains <paramref name="query"/>, ignoring letter case and
-    /// diacritics (REQ-126). Independent of the UI language, so search results do not change
-    /// when the language changes. Canonically equivalent Unicode forms match (REQ-128).
+    /// diacritics (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-126">REQ-126</see>). Independent of the UI language, so search results do not change
+    /// when the language changes. Canonically equivalent Unicode forms match (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-128">REQ-128</see>).
     /// </summary>
     public static bool Contains(string text, string query) =>
         query.Length == 0 || CultureInfo.InvariantCulture.CompareInfo.IndexOf(text, query, SearchOptions) >= 0;
 
     /// <summary>
     /// Comparer for sorting text columns by the conventions of <paramref name="culture"/>
-    /// (REQ-127), ignoring letter case.
+    /// (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-127">REQ-127</see>), ignoring letter case.
     /// </summary>
     public static StringComparer SortComparer(CultureInfo culture) =>
         StringComparer.Create(culture, ignoreCase: true);
 
     /// <summary>
-    /// True if both strings are identical after Unicode normalization (REQ-128). Case and
+    /// True if both strings are identical after Unicode normalization (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-128">REQ-128</see>). Case and
     /// accents still matter: use this for identity checks such as paths and stored values.
     /// </summary>
     public static bool AreEquivalent(string a, string b) =>

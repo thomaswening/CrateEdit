@@ -2,7 +2,7 @@ namespace CrateEdit.Core;
 
 /// <summary>
 /// Locations of the application's own local data. Everything here is independent of the
-/// collection root, so it survives the collection becoming unavailable (REQ-013).
+/// collection root, so it survives the collection becoming unavailable (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-013">REQ-013</see>).
 /// </summary>
 public sealed class AppPaths
 {
@@ -22,4 +22,7 @@ public sealed class AppPaths
     public string DataDirectory { get; }
 
     public string LogDirectory => Path.Combine(DataDirectory, "Logs");
+
+    /// <summary>Recovery records for writes in progress (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0010-safe-write-technique.md">ADR-0010</see>).</summary>
+    public string RecoveryDirectory => Path.Combine(DataDirectory, "Recovery");
 }

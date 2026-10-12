@@ -17,7 +17,7 @@ public sealed record Mp3Tags(TagValues Values, int? Id3Version, TagNotWritable? 
 /// </summary>
 /// <remarks>
 /// A tag that cannot be written is still a successful read (reported in <see cref="Mp3Tags.WriteProblem"/>).
-/// I/O failures (missing file, no access) are exceptions, converted into errors by the caller (ADR-0009).
+/// I/O failures (missing file, no access) are exceptions, converted into errors by the caller (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0009-result-pattern-and-typed-errors.md">ADR-0009</see>).
 /// </remarks>
 public static class Mp3TagReader
 {
