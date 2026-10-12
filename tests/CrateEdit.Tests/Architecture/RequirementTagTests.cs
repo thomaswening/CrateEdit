@@ -32,6 +32,6 @@ public partial class RequirementTagTests
         Assert.Empty(unknown);
     }
 
-    [GeneratedRegex(@"^\*\*(REQ-\d{3}) — ")]
+    [GeneratedRegex(@"^(?:<a id=""[^""]+""></a>)?\*\*(REQ-\d{3}) — ")]
     private static partial Regex RequirementHeading();
 }

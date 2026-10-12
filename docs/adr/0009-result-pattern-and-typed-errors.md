@@ -6,9 +6,9 @@
 ## Context
 CrateEdit has many expected failures: a tag that cannot be written safely, a file that changed externally, a missing file, a locked file. These failures have to be handled in three ways:
 
-- **Shown to the user** in English or German (REQ-123), with a remedy where possible (REQ-096).
-- **Grouped by reason** in the apply result summary (REQ-096).
-- **Classified** as retryable or not (REQ-079).
+- **Shown to the user** in English or German ([REQ-123](../requirements.md#req-123)), with a remedy where possible ([REQ-096](../requirements.md#req-096)).
+- **Grouped by reason** in the apply result summary ([REQ-096](../requirements.md#req-096)).
+- **Classified** as retryable or not ([REQ-079](../requirements.md#req-079)).
 
 The first tag code reported failures as English strings inside exceptions. Strings cannot be translated, grouped or classified reliably, and exceptions for expected outcomes make control flow hard to follow: nothing in a method's signature says it can fail.
 
@@ -37,7 +37,7 @@ Failures are handled in three categories:
 **Turning errors into behavior:**
 - **User messages:** `ErrorMessages` in the app looks up the resource `Error_<code>` (dots and dashes replaced by underscores) in the current UI language. Messages are written in the user's terms and may name user-facing details through placeholders, e.g. the field name as shown in the table ("Artist" / „Interpret“). They contain no technical details such as frame ids, offsets or exception text. Tests fail if any code lacks an English or German message.
 - **Why string codes, not one enum:** each area owns its namespaced codes (`tags.*`, `files.*`) without editing a shared type. Text stays stable in logs and saved summaries. Codes map directly to resource keys. Within an area, enums are still used where exhaustive switches help (e.g. `TagProblem`).
-- **Logs:** errors are logged with all details, in English (REQ-129).
+- **Logs:** errors are logged with all details, in English ([REQ-129](../requirements.md#req-129)).
 - **Retry and grouping:** the apply pipeline uses `IsTransient` and `Code` (Phase 6). Handlers are explicit components called at known places, not a global error bus.
 
 **Rules for writing code:**

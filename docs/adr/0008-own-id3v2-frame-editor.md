@@ -7,7 +7,7 @@
 ## Context
 Background on the byte layout of MP3 tags: [ID3 format guide](../formats/id3.md).
 
-Data safety is CrateEdit's top quality goal. Editing a field must never alter data CrateEdit does not own, above all the cue points, beatgrids and overviews that Serato and Traktor store in GEOB and PRIV frames (REQ-088, REQ-130).
+Data safety is CrateEdit's top quality goal. Editing a field must never alter data CrateEdit does not own, above all the cue points, beatgrids and overviews that Serato and Traktor store in GEOB and PRIV frames ([REQ-088](../requirements.md#req-088), [REQ-130](../requirements.md#req-130)).
 
 The [tag library spike](../spikes/2026-10-12-tag-library-preservation.md) showed that TagLib# and ATL.NET both re-render the whole tag when saving. On real files this destroyed a UFID frame, added unwanted ID3v1 tags, rewrote year values, converted a comment into a different frame, reordered frames and changed bytes of almost every untouched frame.
 
@@ -37,5 +37,5 @@ CrateEdit reads and writes ID3v2.3 and ID3v2.4 tags with its own small frame-lev
 - CrateEdit owns ID3 parsing code (a few hundred lines). Its scope is limited to text frames and comments; all other frames are opaque bytes.
 - Files with unsupported tag features cannot be edited, and for now show no field values. A read-only fallback may be added if this occurs in practice.
 - TagLib# is no longer a dependency, so its LGPL notice is not needed. Audio properties (duration, bitrate) for the table will need a separate, read-only solution in Phase 2.
-- WAV (OPEN-D) needs the same approach for RIFF chunks; ID3 handling is shared.
+- WAV ([OPEN-D](../requirements.md#open-d)) needs the same approach for RIFF chunks; ID3 handling is shared.
 - Status is Proposed until the owner has reviewed it and real files touched by DJ software have been tested.

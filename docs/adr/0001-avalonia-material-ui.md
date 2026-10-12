@@ -4,7 +4,7 @@
 - **Date:** 2026-09-25
 
 ## Context
-CrateEdit must run on Windows and macOS (many DJs use macOS). The maintainer knows .NET and WPF, which is Windows-only. The core UI is a large, editable, keyboard-driven table (20,000 rows, REQ-005, REQ-046, REQ-049).
+CrateEdit must run on Windows and macOS (many DJs use macOS). The maintainer knows .NET and WPF, which is Windows-only. The core UI is a large, editable, keyboard-driven table (20,000 rows, [REQ-005](../requirements.md#req-005), [REQ-046](../requirements.md#req-046), [REQ-049](../requirements.md#req-049)).
 
 ## Decision
 Use **Avalonia** for the UI, styled with **Material.Avalonia**, using MVVM with CommunityToolkit.Mvvm.

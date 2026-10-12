@@ -34,6 +34,15 @@ Every new error code goes into `ErrorCodes` and needs an `Error_<code>` message 
 - No hard-coded UI text: every string goes into `src/CrateEdit.App/Resources/Strings.resx` (English) **and** `Strings.de.resx` (German) in the same PR. Tests fail on missing translations and on literal text in XAML.
 - Text comparisons (search, sorting, equality of names and paths) use `CrateEdit.Core.Text.TextMatching`, never ad-hoc `string.Equals` or `Contains`.
 
+## Requirement links
+Every mention of a requirement or open decision in the docs links to its definition in [requirements.md](requirements.md), e.g. `[REQ-088](requirements.md#req-088)`. New requirements get an anchor (`<a id="req-131"></a>`) at the start of their definition. You don't need to write either by hand: run
+
+```bash
+dotnet run tools/RequirementLinks.cs -- --fix
+```
+
+and it adds missing anchors and links. CI runs the same tool with `--check` and fails on unlinked mentions, links to unknown requirements, and mentions of requirements that do not exist.
+
 ## Architecture documentation
 - [architecture.md](architecture.md) is kept current: a PR that adds or changes a building block, dependency rule or key concept updates it in the same PR.
 - Significant decisions (technology choices, data formats, safety mechanisms, anything hard to reverse) get an [Architecture Decision Record](adr/) in the PR that makes them. A changed decision gets a new ADR that supersedes the old one.
@@ -45,15 +54,15 @@ Each requirement that can be verified automatically gets at least one test tagge
 |---|---|---|
 | Unit | Core logic without I/O | staging model, undo grouping, retry classification, effective values |
 | Integration | Real files and storage in temp directories | tag read/write round trips, byte-level preservation of audio and foreign frames (GEOB, cues), SQLite index, file watching, crash/fault injection during writes and recovery |
-| Architecture | Structural rules on the code itself | only the apply component may reference the tag writer, so no other code path can write audio files (REQ-052, REQ-075) |
+| Architecture | Structural rules on the code itself | only the apply component may reference the tag writer, so no other code path can write audio files ([REQ-052](requirements.md#req-052), [REQ-075](requirements.md#req-075)) |
 | End-to-end | The real app UI driven headlessly via Avalonia.Headless | keyboard workflow, staging then apply, no autoplay on selection, prompts and their choices |
 
 Key guardrails and how they are enforced:
-- **No write outside apply** (REQ-052, REQ-075): architecture test plus an integration test that edits, stages and undoes on real files and asserts their bytes are unchanged.
-- **Preserve everything not edited** (REQ-088): byte-level comparison of all non-edited frames and the audio payload after every write test.
-- **Never leave a corrupt file** (REQ-088, REQ-089, REQ-092): fault-injection tests that abort the write at each step and verify the file is either fully old or fully new and that recovery reconciles correctly.
-- **No silent overwrite** (REQ-074): tests that change a file externally between staging and apply and assert it is skipped or flagged.
-- **No automatic transmission** (REQ-117): architecture test that the app has no network-capable dependency in the diagnostics path.
+- **No write outside apply** ([REQ-052](requirements.md#req-052), [REQ-075](requirements.md#req-075)): architecture test plus an integration test that edits, stages and undoes on real files and asserts their bytes are unchanged.
+- **Preserve everything not edited** ([REQ-088](requirements.md#req-088)): byte-level comparison of all non-edited frames and the audio payload after every write test.
+- **Never leave a corrupt file** ([REQ-088](requirements.md#req-088), [REQ-089](requirements.md#req-089), [REQ-092](requirements.md#req-092)): fault-injection tests that abort the write at each step and verify the file is either fully old or fully new and that recovery reconciles correctly.
+- **No silent overwrite** ([REQ-074](requirements.md#req-074)): tests that change a file externally between staging and apply and assert it is skipped or flagged.
+- **No automatic transmission** ([REQ-117](requirements.md#req-117)): architecture test that the app has no network-capable dependency in the diagnostics path.
 
 ### Test fixtures
 Real DJ-software-tagged files contain copyrighted audio and must not be committed. Fixtures in the repository are generated: short synthetic audio (silence or a tone) carrying tag frames copied from real files (Serato GEOB, Rekordbox/Traktor data), so the frames being protected are real while the audio is not. Original sample files stay outside the repository.
