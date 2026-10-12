@@ -293,7 +293,7 @@ Status: Adds [REQ-130](#req-130) (minimal edits) and localization and text handl
 
 <a id="req-120"></a>**REQ-120 — Future extensions (COULD).** Later versions COULD support multiple collection roots, manually curated named track lists, custom fields, external metadata providers and waveform display. These are not first-release acceptance criteria.
 
-<a id="open-c"></a>**OPEN-C — Safe-write guarantees.** Define supported filesystem assumptions and verification guarantees for safe MP3/WAV writes ([REQ-088](#req-088) to [REQ-091](#req-091)). Note: an atomic replace typically requires a temporary file on the same volume as the target, which is distinct from the recovery material kept locally under [REQ-013](#req-013). To be settled by spike.
+<a id="open-c"></a>**OPEN-C — Safe-write guarantees.** **Resolved** by [ADR-0010](adr/0010-safe-write-technique.md) after the [safe-write spike](spikes/2026-10-12-safe-write.md): temp file next to the original, local tag-only recovery material, verification before and after `File.Replace`, and reconciliation after a crash. Crash-atomic replace is only assumed on NTFS and APFS; FAT32, exFAT and Google Drive rely on the recovery material.
 
 <a id="open-d"></a>**OPEN-D — WAV tagging.** WAV metadata (BPM and key in particular) has no single standard tagging convention across Rekordbox, Serato and Traktor (RIFF INFO chunk vs. embedded ID3 chunk support varies). To be settled by testing against real DJ software.
 
