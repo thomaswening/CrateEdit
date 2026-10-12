@@ -5,6 +5,7 @@
       "release-type": "simple",
       "package-name": "CrateEdit",
       "include-component-in-tag": false,
+      "initial-version": "0.1.0",
       "bump-minor-pre-major": true,
       "extra-files": ["Directory.Build.props"],
       "changelog-sections": [
