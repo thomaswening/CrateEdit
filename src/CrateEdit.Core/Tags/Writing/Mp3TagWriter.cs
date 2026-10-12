@@ -18,7 +18,7 @@ public sealed class TagWriteException(string message) : Exception(message);
 public static class Mp3TagWriter
 {
     /// <summary>Extra space reserved when a tag must grow, so later edits fit without moving the audio.</summary>
-    internal const int PaddingWhenGrowing = 4096;
+    internal const int PaddingWhenGrowingBytes = 4096;
 
     /// <summary>
     /// Writes <paramref name="sourcePath"/> with <paramref name="changes"/> applied to
@@ -46,14 +46,14 @@ public static class Mp3TagWriter
             frames = Id3FieldMap.Apply(frames, field, value, tag.Version);
         }
 
-        var newTag = tag.Render(frames, PaddingWhenGrowing);
-        var audioStart = existing?.TotalSize ?? 0;
+        var newTag = tag.Render(frames, PaddingWhenGrowingBytes);
+        var audioStart = existing?.Header.TotalSizeBytes ?? 0;
 
-        var lastBytes = new byte[Math.Min(Id3v1Tag.Size, source.Length - audioStart)];
+        var lastBytes = new byte[Math.Min(Id3v1Tag.SizeBytes, source.Length - audioStart)];
         source.Position = source.Length - lastBytes.Length;
         source.ReadExactly(lastBytes);
         var hasId3v1 = Id3v1Tag.IsPresent(lastBytes);
-        var audioEnd = source.Length - (hasId3v1 ? Id3v1Tag.Size : 0);
+        var audioEnd = source.Length - (hasId3v1 ? Id3v1Tag.SizeBytes : 0);
 
         using var destination = new FileStream(destinationPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         destination.Write(newTag);

@@ -8,7 +8,7 @@ namespace CrateEdit.Core.Tags.Id3;
 /// </summary>
 internal static class Id3v1Tag
 {
-    public const int Size = 128;
+    public const int SizeBytes = 128;
 
     // ID3v1 genres 0-79 from the original specification.
     internal static readonly string[] Genres =
@@ -26,7 +26,7 @@ internal static class Id3v1Tag
     private const byte UnknownGenre = 255;
 
     public static bool IsPresent(ReadOnlySpan<byte> lastBytes) =>
-        lastBytes.Length >= Size && lastBytes[^Size..].StartsWith("TAG"u8);
+        lastBytes.Length >= SizeBytes && lastBytes[^SizeBytes..].StartsWith("TAG"u8);
 
     /// <summary>Returns a copy of <paramref name="tag"/> with the given fields updated.</summary>
     public static byte[] Apply(ReadOnlySpan<byte> tag, IReadOnlyDictionary<TagField, string?> changes)

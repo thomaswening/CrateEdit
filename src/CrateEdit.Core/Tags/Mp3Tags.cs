@@ -34,17 +34,22 @@ public static class Mp3TagReader
 
     internal static Id3v2Tag? ReadId3v2(Stream stream)
     {
-        Span<byte> header = stackalloc byte[Id3v2Tag.HeaderSize];
+        // On the stack: no heap allocation for these 10 bytes, which are read for every file in the collection.
+        Span<byte> headerBytes = stackalloc byte[Id3v2Header.SizeBytes];
         stream.Position = 0;
-        if (stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) < header.Length ||
-            Id3v2Tag.ReadTotalSize(header) is not { } totalSize || totalSize > stream.Length)
+
+        // A single Read may return fewer bytes than requested (e.g. on cloud-synced drives).
+        // ReadAtLeast keeps reading until the buffer is full or the file ends; a file shorter
+        // than 10 bytes simply has no tag, so no exception is wanted.
+        if (stream.ReadAtLeast(headerBytes, headerBytes.Length, throwOnEndOfStream: false) < headerBytes.Length ||
+            Id3v2Header.TryParse(headerBytes) is not { } header || header.TotalSizeBytes > stream.Length)
         {
             return null;
         }
 
-        var data = new byte[totalSize];
+        var tag = new byte[header.TotalSizeBytes];
         stream.Position = 0;
-        stream.ReadExactly(data);
-        return Id3v2Tag.Parse(data);
+        stream.ReadExactly(tag);
+        return Id3v2Tag.Parse(header, tag);
     }
 }

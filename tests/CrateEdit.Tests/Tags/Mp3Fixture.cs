@@ -28,7 +28,7 @@ internal static class Mp3Fixture
             var size = new byte[4];
             if (version == 4)
             {
-                WriteSyncSafe(size, frame.Body.Length);
+                WriteSynchsafe(size, frame.Body.Length);
             }
             else
             {
@@ -46,7 +46,7 @@ internal static class Mp3Fixture
         "ID3"u8.CopyTo(header);
         header[3] = (byte)version;
         header[5] = flags;
-        WriteSyncSafe(header.AsSpan(6), body.Count);
+        WriteSynchsafe(header.AsSpan(6), body.Count);
 
         return [.. header, .. body, .. Audio(audioLength), .. id3v1 ?? []];
     }
@@ -70,11 +70,11 @@ internal static class Mp3Fixture
             return new ParsedMp3(null, 0, [], SplitAudio(file, 0), Id3v1(file));
         }
 
-        int version = file[3], size = ReadSyncSafe(file.AsSpan(6)), position = 10;
+        int version = file[3], size = ReadSynchsafe(file.AsSpan(6)), position = 10;
         var frames = new List<RawFrame>();
         while (position < 10 + size && file[position] != 0)
         {
-            var frameSize = version == 4 ? ReadSyncSafe(file.AsSpan(position + 4)) : BinaryPrimitives.ReadInt32BigEndian(file.AsSpan(position + 4));
+            var frameSize = version == 4 ? ReadSynchsafe(file.AsSpan(position + 4)) : BinaryPrimitives.ReadInt32BigEndian(file.AsSpan(position + 4));
             frames.Add(new RawFrame(
                 Encoding.ASCII.GetString(file, position, 4),
                 BinaryPrimitives.ReadUInt16BigEndian(file.AsSpan(position + 8)),
@@ -90,9 +90,9 @@ internal static class Mp3Fixture
     private static byte[]? Id3v1(byte[] file) =>
         file.Length >= 128 && file.AsSpan(file.Length - 128).StartsWith("TAG"u8) ? file[^128..] : null;
 
-    private static int ReadSyncSafe(ReadOnlySpan<byte> b) => (b[0] << 21) | (b[1] << 14) | (b[2] << 7) | b[3];
+    private static int ReadSynchsafe(ReadOnlySpan<byte> b) => (b[0] << 21) | (b[1] << 14) | (b[2] << 7) | b[3];
 
-    private static void WriteSyncSafe(Span<byte> d, int v)
+    private static void WriteSynchsafe(Span<byte> d, int v)
     {
         d[0] = (byte)((v >> 21) & 0x7F);
         d[1] = (byte)((v >> 14) & 0x7F);

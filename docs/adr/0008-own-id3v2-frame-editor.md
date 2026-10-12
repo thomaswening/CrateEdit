@@ -5,6 +5,8 @@
 - **Supersedes:** [ADR-0005](0005-taglibsharp.md)
 
 ## Context
+Background on the byte layout of MP3 tags: [ID3 format guide](../formats/id3.md).
+
 Data safety is CrateEdit's top quality goal. Editing a field must never alter data CrateEdit does not own, above all the cue points, beatgrids and overviews that Serato and Traktor store in GEOB and PRIV frames (REQ-088, REQ-130).
 
 The [tag library spike](../spikes/2026-10-12-tag-library-preservation.md) showed that TagLib# and ATL.NET both re-render the whole tag when saving. On real files this destroyed a UFID frame, added unwanted ID3v1 tags, rewrote year values, converted a comment into a different frame, reordered frames and changed bytes of almost every untouched frame.
