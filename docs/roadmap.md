@@ -11,7 +11,7 @@ Draft | 9 October 2026 | Based on requirements v0.4
 ## Milestone 1 — Read-only collection browser
 
 ### Phase 0: Foundations
-Solution skeleton: `CrateEdit.App` (Avalonia + Material.Avalonia, CommunityToolkit.Mvvm), `CrateEdit.Core` (domain, no UI dependency), `CrateEdit.Tests`. CI on GitHub Actions building and testing on Windows and macOS. App-data location, local diagnostic logging with 30-day cleanup, command/shortcut registry with default bindings, English/German UI resources and text-matching rules.
+Solution skeleton: `CrateEdit.App` (Avalonia + Material.Avalonia, CommunityToolkit.Mvvm), `CrateEdit.Core` (domain, no UI dependency), `CrateEdit.Tests`. CI on GitHub Actions building and testing on Windows and macOS. App-data location, local diagnostic logging with 30-day cleanup, command/shortcut registry with default bindings, English/German UI resources and text-matching rules, release-please and the requirements traceability report.
 - Requirements: REQ-108 (groundwork), REQ-109, REQ-116, REQ-117, REQ-118, REQ-123 to REQ-129
 - Needs: nothing
 
@@ -45,6 +45,8 @@ Durable staged-edit model, inline editing, batch editor with leave/set/clear sem
 
 ### Phase 6: Apply (happy path and failure handling)
 Apply selected staged changes using the Phase 1 write technique, with local recovery material, progress, independent per-track failures, bounded retry with shared-cause detection, result summary, pending-after-apply choice, and reconciliation after an interrupted apply.
+
+Release packaging: the release workflow builds unsigned Windows and macOS packages and attaches them to the GitHub release.
 
 Interim safety for the first release (replaced by Phases 7 and 8):
 - **Stale-value check instead of conflict resolution.** Immediately before writing a track, its on-disk values are compared with the values captured when the edit was staged. If any field changed externally (including artist/title), the track is skipped, left staged and reported. This keeps REQ-074 (no silent overwrite) true from the first release, without the preflight and resolution UI.
