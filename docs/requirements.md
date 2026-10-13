@@ -1,6 +1,6 @@
 # CrateEdit: Verifiable Product Requirements
-Version: 0.6 draft | 12 October 2026
-Status: Adds [REQ-130](#req-130) (minimal edits) and localization and text handling (section 12). Open decisions are collected in section 13 ([OPEN-C](#open-c), [OPEN-D](#open-d), [OPEN-F](#open-f) to [OPEN-N](#open-n)). Supersedes v0.4.
+Version: 0.7 draft | 13 October 2026
+Status: Adds [REQ-131](#req-131) (fields not shown by DJ software) and resolves [OPEN-D](#open-d) (WAV tagging). Open decisions are collected in section 13 ([OPEN-C](#open-c), [OPEN-D](#open-d), [OPEN-F](#open-f) to [OPEN-N](#open-n)). Supersedes v0.4.
 
 ## Requirement conventions
 **SHALL** = mandatory for the stated release; **SHOULD** = preferred, with an acceptable documented exception; **COULD** = optional or future capability. Each requirement has a stable ID. Conditions are expressed as **WHEN … THEN …**, **IF … THEN …**, **BEFORE …**, **WHILE …**, or **AFTER …**. An implementation technique is not a product requirement unless explicitly stated. Items marked **OPEN** require a decision before they can be treated as acceptance criteria. **OUT OF SCOPE** marks a capability explicitly not required for the first release.
@@ -289,13 +289,15 @@ Status: Adds [REQ-130](#req-130) (minimal edits) and localization and text handl
 
 <a id="req-129"></a>**REQ-129 — Language-independent data (SHALL).** Persisted data (index, staging, saved filters, shortcuts) and diagnostic logs SHALL NOT depend on the UI language, so that changing the language does not affect saved data and logs remain readable for troubleshooting.
 
+<a id="req-131"></a>**REQ-131 — Fields not shown by DJ software (SHOULD).** WHEN the user edits a field that the user's DJ software does not read from the file's format (for Rekordbox: label, BPM and key of WAV files, see [ADR-0011](adr/0011-wav-tagging.md)), the application SHOULD indicate that the change will be saved in the file but not shown by that software.
+
 ## 13. Deferred capabilities and unresolved decisions
 
 <a id="req-120"></a>**REQ-120 — Future extensions (COULD).** Later versions COULD support multiple collection roots, manually curated named track lists, custom fields, external metadata providers and waveform display. These are not first-release acceptance criteria.
 
 <a id="open-c"></a>**OPEN-C — Safe-write guarantees.** **Resolved** by [ADR-0010](adr/0010-safe-write-technique.md) after the [safe-write spike](spikes/2026-10-12-safe-write.md): temp file next to the original, local tag-only recovery material, verification before and after `File.Replace`, and reconciliation after a crash. Crash-atomic replace is only assumed on NTFS and APFS; FAT32, exFAT and Google Drive rely on the recovery material.
 
-<a id="open-d"></a>**OPEN-D — WAV tagging.** WAV metadata (BPM and key in particular) has no single standard tagging convention across Rekordbox, Serato and Traktor (RIFF INFO chunk vs. embedded ID3 chunk support varies). To be settled by testing against real DJ software.
+<a id="open-d"></a>**OPEN-D — WAV tagging.** **Resolved** by [ADR-0011](adr/0011-wav-tagging.md) after [probes in Rekordbox](spikes/2026-10-13-rekordbox-wav-probes.md): Rekordbox reads only the LIST/INFO chunk, as UTF-8, and ignores the "id3 " chunk. CrateEdit writes both: INFO for the fields it can hold, "id3 " for all fields.
 
 <a id="open-f"></a>**OPEN-F — Move/rename identity for all tracks.** [REQ-020](#req-020) only attempts move matching for tracks with staged changes, while [REQ-040](#req-040) marks any unrecognized new file pending. Reorganizing a folder of finished tracks would therefore make them all pending and lose their date added. Proposal: recognize moves/renames for all tracks (same size and identical audio content appearing during the same sync), preserving identity, pending status and date added; [REQ-021](#req-021) stays strict for staged tracks. Also defines "unrecognized" in [REQ-040](#req-040).
 

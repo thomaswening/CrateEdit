@@ -1,5 +1,6 @@
 using CrateEdit.Core.Results;
 using CrateEdit.Core.Tags.Id3;
+using CrateEdit.Core.Tags.Riff;
 
 namespace CrateEdit.Core.Tags.Writing;
 
@@ -24,6 +25,7 @@ internal static class TagFileFormats
     public static ITagFileFormat? For(string path) => AudioFormats.Detect(path) switch
     {
         AudioFormat.Mp3 => Mp3FileFormat.Instance,
+        AudioFormat.Wav => WavFileFormat.Instance,
         _ => null,
     };
 }
@@ -56,6 +58,40 @@ internal sealed class Mp3FileFormat : ITagFileFormat
                 stream.ReadExactly(last);
                 suffixLength = Id3v1Tag.IsPresent(last) ? Id3v1Tag.SizeBytes : 0;
             }
+        }
+
+        return AudioLayout.Read(path, prefixLength, suffixLength);
+    }
+}
+
+/// <summary>WAV: <c>[RIFF header and chunks before the audio][audio][chunks after it]</c>.</summary>
+internal sealed class WavFileFormat : ITagFileFormat
+{
+    public static WavFileFormat Instance { get; } = new();
+
+    public FileTags Read(string path) => WavTagReader.Read(path);
+
+    public Result Rewrite(string sourcePath, string destinationPath, IReadOnlyDictionary<TagField, string?> changes) =>
+        WavTagWriter.Rewrite(sourcePath, destinationPath, changes);
+
+    /// <summary>Chunks may be added (INFO, id3) and resized, so only the audio is compared.</summary>
+    public bool IsConsistentRewrite(AudioLayout original, AudioLayout rewritten) => true;
+
+    public AudioLayout ReadLayout(string path)
+    {
+        long prefixLength;
+        long suffixLength;
+        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            var riff = RiffFile.Read(stream);
+            if (riff.IsFailure)
+            {
+                throw new EndOfStreamException($"Not a readable WAV file: {riff.Error}");
+            }
+
+            var data = riff.Value.Data;
+            prefixLength = data.BodyOffset;
+            suffixLength = riff.Value.Length - data.BodyOffset - data.Size;
         }
 
         return AudioLayout.Read(path, prefixLength, suffixLength);

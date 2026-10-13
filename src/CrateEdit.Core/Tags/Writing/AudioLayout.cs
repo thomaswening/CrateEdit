@@ -6,7 +6,7 @@ namespace CrateEdit.Core.Tags.Writing;
 /// <summary>
 /// An audio file split into <c>[prefix][audio][suffix]</c>, with hashes for verification. The
 /// audio is never changed by a tag write; prefix and suffix hold the metadata around it. For MP3,
-/// the prefix is the ID3v2 tag and the suffix the ID3v1 tag (see docs/formats/id3.md).
+/// the prefix is the ID3v2 tag and the suffix the ID3v1 tag (see https://github.com/thomaswening/CrateEdit/blob/main/docs/formats/id3.md).
 /// </summary>
 /// <param name="Length">Length of the whole file, in bytes.</param>
 /// <param name="Prefix">All bytes before the audio.</param>

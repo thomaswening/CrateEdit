@@ -19,7 +19,11 @@ internal sealed record RawFrame(string Id, ushort Flags, byte[] Body)
 internal static class Mp3Fixture
 {
     public static byte[] Build(int version, IEnumerable<RawFrame> frames, int padding = 256, int audioLength = 20_000,
-        byte[]? id3v1 = null, byte flags = 0)
+        byte[]? id3v1 = null, byte flags = 0) =>
+        [.. Tag(version, frames, padding, flags), .. Audio(audioLength), .. id3v1 ?? []];
+
+    /// <summary>An ID3v2 tag on its own (header, frames, padding), e.g. for the "id3 " chunk of a WAV file.</summary>
+    public static byte[] Tag(int version, IEnumerable<RawFrame> frames, int padding = 256, byte flags = 0)
     {
         var body = new List<byte>();
         foreach (var frame in frames)
@@ -48,7 +52,7 @@ internal static class Mp3Fixture
         header[5] = flags;
         WriteSynchsafe(header.AsSpan(6), body.Count);
 
-        return [.. header, .. body, .. Audio(audioLength), .. id3v1 ?? []];
+        return [.. header, .. body];
     }
 
     public static byte[] BuildWithoutId3v2(int audioLength = 20_000, byte[]? id3v1 = null) => [.. Audio(audioLength), .. id3v1 ?? []];

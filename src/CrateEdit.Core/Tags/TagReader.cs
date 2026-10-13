@@ -13,6 +13,7 @@ public static class TagReader
     public static FileTags Read(string path) => AudioFormats.Detect(path) switch
     {
         AudioFormat.Mp3 => Mp3TagReader.Read(path),
+        AudioFormat.Wav => WavTagReader.Read(path),
         _ => new FileTags(TagValues.Empty, new TagNotWritable(TagProblem.UnsupportedFormat)),
     };
 }
@@ -21,15 +22,21 @@ public static class TagReader
 public enum AudioFormat
 {
     Mp3,
+    Wav,
 }
 
 /// <summary>Determines a file's format.</summary>
 public static class AudioFormats
 {
-    /// <summary>The format of <paramref name="path"/> by its extension, or null if unsupported.</summary>
-    public static AudioFormat? Detect(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+    /// <summary>The file extensions of each supported format; case does not matter.</summary>
+    private static readonly Dictionary<string, AudioFormat> FormatsByExtension = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".mp3" => AudioFormat.Mp3,
-        _ => null,
+        [".mp3"] = AudioFormat.Mp3,
+        [".wav"] = AudioFormat.Wav,
+        [".wave"] = AudioFormat.Wav,
     };
+
+    /// <summary>The format of <paramref name="path"/> by its extension, or null if unsupported.</summary>
+    public static AudioFormat? Detect(string path) =>
+        FormatsByExtension.TryGetValue(Path.GetExtension(path), out var format) ? format : null;
 }

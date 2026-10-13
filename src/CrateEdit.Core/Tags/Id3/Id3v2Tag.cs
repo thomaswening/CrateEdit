@@ -1,9 +1,10 @@
 using System.Buffers.Binary;
 using System.Text;
+using CrateEdit.Core.Results;
 
 namespace CrateEdit.Core.Tags.Id3;
 
-// Byte layout of ID3v2 tags, with an annotated example: docs/formats/id3.md
+// Byte layout of ID3v2 tags, with an annotated example: https://github.com/thomaswening/CrateEdit/blob/main/docs/formats/id3.md
 
 /// <summary>One ID3v2 frame, kept as raw bytes so it can be written back unchanged.</summary>
 internal sealed record Id3v2Frame(string Id, ushort Flags, byte[] Body)
@@ -95,8 +96,7 @@ internal sealed class Id3v2Tag
             return new Id3v2Tag(header, frames, new TagNotWritable(TagProblem.UnsupportedVersion, Version: header.Version));
         }
 
-        if (header.HasFlag(Id3v2Header.UnsynchronisationFlag) || header.HasFlag(Id3v2Header.ExtendedHeaderFlag) ||
-            header.HasFlag(Id3v2Header.FooterFlag))
+        if (UsesUnsupportedFeature(header))
         {
             return new Id3v2Tag(header, frames, new TagNotWritable(TagProblem.UnsupportedFeature, Version: header.Version));
         }
@@ -105,27 +105,16 @@ internal sealed class Id3v2Tag
         // directly after it. A zero byte where the next frame id should start begins the padding.
         var body = tag.Slice(Id3v2Header.SizeBytes, header.TagSizeBytes);
         var position = 0;
-        while (position + FrameHeaderSizeBytes <= body.Length && body[position] != 0)
+        while (HasAnotherFrame(body, position))
         {
-            var id = body.Slice(position, 4);
-            if (!IsValidFrameId(id))
+            var frame = ReadFrame(body, position, header.Version);
+            if (frame.IsFailure)
             {
-                return Malformed(frameId: null, position);
+                return Malformed(((TagNotWritable)frame.Error).FrameId, position);
             }
 
-            var sizeBytes = body.Slice(position + 4, 4);
-            var bodySize = header.Version == 4 ? Synchsafe.Read(sizeBytes) : BinaryPrimitives.ReadInt32BigEndian(sizeBytes);
-            if (bodySize < 0 || (header.Version == 4 && !Synchsafe.IsValid(sizeBytes)) ||
-                position + FrameHeaderSizeBytes + bodySize > body.Length)
-            {
-                return Malformed(Encoding.ASCII.GetString(id), position);
-            }
-
-            frames.Add(new Id3v2Frame(
-                Encoding.ASCII.GetString(id),
-                BinaryPrimitives.ReadUInt16BigEndian(body.Slice(position + 8, 2)),
-                body.Slice(position + FrameHeaderSizeBytes, bodySize).ToArray()));
-            position += FrameHeaderSizeBytes + bodySize;
+            frames.Add(frame.Value);
+            position += FrameHeaderSizeBytes + frame.Value.Body.Length;
         }
 
         // Everything after the last frame must be padding. Anything else means the tag was not
@@ -179,6 +168,62 @@ internal sealed class Id3v2Tag
 
         return result;
     }
+
+    /// <summary>
+    /// Unsynchronisation, an extended header and a footer each change how the bytes after the
+    /// header must be interpreted or kept consistent; rewriting such a tag correctly is not supported.
+    /// </summary>
+    private static bool UsesUnsupportedFeature(Id3v2Header header) =>
+        header.HasFlag(Id3v2Header.UnsynchronisationFlag) || header.HasFlag(Id3v2Header.ExtendedHeaderFlag) ||
+        header.HasFlag(Id3v2Header.FooterFlag);
+
+    /// <summary>
+    /// Another frame follows if a complete frame header fits before the end of the tag and the next
+    /// byte is not zero (a zero byte where a frame id would start begins the padding).
+    /// </summary>
+    private static bool HasAnotherFrame(ReadOnlySpan<byte> body, int position) =>
+        position + FrameHeaderSizeBytes <= body.Length && body[position] != 0;
+
+    /// <summary>Reads the frame at <paramref name="position"/>: header (id, size, flags), then the body by its size.</summary>
+    /// <returns>The frame, or <see cref="TagNotWritable"/> if its id or size is invalid.</returns>
+    private static Result<Id3v2Frame> ReadFrame(ReadOnlySpan<byte> body, int position, int version)
+    {
+        var idBytes = body.Slice(position, 4);
+        if (!IsValidFrameId(idBytes))
+        {
+            return new TagNotWritable(TagProblem.Malformed);
+        }
+
+        var id = Encoding.ASCII.GetString(idBytes);
+        var sizeBytes = body.Slice(position + 4, 4);
+        if (!IsValidFrameSize(sizeBytes, version, out var bodySize) || !FitsInTag(body, position, bodySize))
+        {
+            return new TagNotWritable(TagProblem.Malformed, id);
+        }
+
+        var flags = BinaryPrimitives.ReadUInt16BigEndian(body.Slice(position + 8, 2));
+        return new Id3v2Frame(id, flags, body.Slice(position + FrameHeaderSizeBytes, bodySize).ToArray());
+    }
+
+    /// <summary>
+    /// Decodes the frame body size: synchsafe in ID3v2.4, a plain 32-bit integer in ID3v2.3. A
+    /// negative size, or a v2.4 size byte with its top bit set, means the size field is corrupt.
+    /// </summary>
+    private static bool IsValidFrameSize(ReadOnlySpan<byte> sizeBytes, int version, out int bodySize)
+    {
+        if (version == 4)
+        {
+            bodySize = Synchsafe.Read(sizeBytes);
+            return Synchsafe.IsValid(sizeBytes);
+        }
+
+        bodySize = BinaryPrimitives.ReadInt32BigEndian(sizeBytes);
+        return bodySize >= 0;
+    }
+
+    /// <summary>The frame body must end within the tag; otherwise the tag is truncated or the size is wrong.</summary>
+    private static bool FitsInTag(ReadOnlySpan<byte> body, int position, int frameBodySize) =>
+        position + FrameHeaderSizeBytes + frameBodySize <= body.Length;
 
     /// <summary>A new, empty ID3v2.3 tag for files without one; v2.3 is read by all major DJ software.</summary>
     public static Id3v2Tag CreateEmpty() => new(new Id3v2Header(3, 0, 0, 0), [], null);
