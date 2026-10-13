@@ -17,22 +17,26 @@ public class WritePathTests
     [Fact]
     public void Only_the_apply_pipeline_references_the_tag_writer_in_core()
     {
+        // Act
         var result = Types.InAssembly(typeof(AppInfo).Assembly)
             .That().DoNotResideInNamespace(WriterNamespace)
             .And().DoNotResideInNamespace(ApplyNamespace)
             .ShouldNot().HaveDependencyOn(WriterNamespace)
             .GetResult();
 
+        // Assert
         Assert.True(result.IsSuccessful, Describe(result));
     }
 
     [Fact]
     public void The_ui_never_references_the_tag_writer()
     {
+        // Act
         var result = Types.InAssembly(typeof(App.App).Assembly)
             .ShouldNot().HaveDependencyOn(WriterNamespace)
             .GetResult();
 
+        // Assert
         Assert.True(result.IsSuccessful, Describe(result));
     }
 

@@ -9,6 +9,9 @@ public class TextMatchingTests
     private const string ComposedE = "Beyoncé";
     private const string DecomposedE = "Beyoncé";
 
+    private static string[] SortIn(string cultureName, string[] names) =>
+        names.Order(TextMatching.SortComparer(CultureInfo.GetCultureInfo(cultureName))).ToArray();
+
     [Theory]
     [Trait("Req", "REQ-126")]
     [InlineData("Beyoncé", "beyonce")]
@@ -18,22 +21,35 @@ public class TextMatchingTests
     [InlineData("Daft Punk", "")]
     public void Search_ignores_case_and_accents(string text, string query)
     {
-        Assert.True(TextMatching.Contains(text, query));
+        // Act
+        var matches = TextMatching.Contains(text, query);
+
+        // Assert
+        Assert.True(matches);
     }
 
     [Fact]
     [Trait("Req", "REQ-126")]
     public void Search_does_not_match_different_letters()
     {
-        Assert.False(TextMatching.Contains("Beyoncé", "beyonca"));
+        // Act
+        var matches = TextMatching.Contains("Beyoncé", "beyonca");
+
+        // Assert
+        Assert.False(matches);
     }
 
-    [Fact]
+    [Theory]
     [Trait("Req", "REQ-128")]
-    public void Search_matches_decomposed_text()
+    [InlineData("beyonce")]
+    [InlineData(ComposedE)]
+    public void Search_matches_decomposed_text(string query)
     {
-        Assert.True(TextMatching.Contains(DecomposedE, "beyonce"));
-        Assert.True(TextMatching.Contains(DecomposedE, ComposedE));
+        // Act
+        var matches = TextMatching.Contains(DecomposedE, query);
+
+        // Assert
+        Assert.True(matches);
     }
 
     [Theory]
@@ -42,10 +58,13 @@ public class TextMatchingTests
     [InlineData("en-GB")]
     public void Sorting_places_umlauts_with_their_base_letter(string cultureName)
     {
+        // Arrange
         string[] names = ["Zedd", "Ärzte", "Arzt", "Bonobo"];
 
-        var sorted = names.Order(TextMatching.SortComparer(CultureInfo.GetCultureInfo(cultureName))).ToArray();
+        // Act
+        var sorted = SortIn(cultureName, names);
 
+        // Assert
         Assert.Equal(["Arzt", "Ärzte", "Bonobo", "Zedd"], sorted);
     }
 
@@ -53,10 +72,13 @@ public class TextMatchingTests
     [Trait("Req", "REQ-127")]
     public void Sorting_ignores_case()
     {
+        // Arrange
         string[] names = ["bonobo", "Arzt", "Burial"];
 
-        var sorted = names.Order(TextMatching.SortComparer(CultureInfo.GetCultureInfo("en-GB"))).ToArray();
+        // Act
+        var sorted = SortIn("en-GB", names);
 
+        // Assert
         Assert.Equal(["Arzt", "bonobo", "Burial"], sorted);
     }
 
@@ -64,15 +86,26 @@ public class TextMatchingTests
     [Trait("Req", "REQ-128")]
     public void Composed_and_decomposed_forms_are_equivalent()
     {
+        // Arrange
         Assert.NotEqual(ComposedE, DecomposedE);
-        Assert.True(TextMatching.AreEquivalent(ComposedE, DecomposedE));
+
+        // Act
+        var equivalent = TextMatching.AreEquivalent(ComposedE, DecomposedE);
+
+        // Assert
+        Assert.True(equivalent);
     }
 
-    [Fact]
+    [Theory]
     [Trait("Req", "REQ-128")]
-    public void Equivalence_still_respects_case_and_accents()
+    [InlineData("beyoncé")]
+    [InlineData("Beyonce")]
+    public void Equivalence_still_respects_case_and_accents(string other)
     {
-        Assert.False(TextMatching.AreEquivalent("Beyoncé", "beyoncé"));
-        Assert.False(TextMatching.AreEquivalent("Beyoncé", "Beyonce"));
+        // Act
+        var equivalent = TextMatching.AreEquivalent("Beyoncé", other);
+
+        // Assert
+        Assert.False(equivalent);
     }
 }
