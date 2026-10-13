@@ -39,7 +39,17 @@ public static class WavTagReader
 
         // With two copies of a tag chunk it is unclear which one other software reads, and
         // editing one would leave the other stale. Both duplicated kinds are named for the log.
-        var duplicated = new[] { (infoChunks, "LIST/INFO"), (id3Chunks, "id3") }.Where(c => c.Item1.Count > 1).Select(c => c.Item2).ToList();
+        var duplicated = new List<string>();
+        if (infoChunks.Count > 1)
+        {
+            duplicated.Add("LIST/INFO");
+        }
+
+        if (id3Chunks.Count > 1)
+        {
+            duplicated.Add("id3");
+        }
+
         if (duplicated.Count > 0)
         {
             return new TagNotWritable(TagProblem.Malformed, string.Join(", ", duplicated));
@@ -105,17 +115,42 @@ public static class WavTagReader
         return !body.AsSpan(parsed.TotalSizeBytes).ContainsAnyExcept((byte)0);
     }
 
-    /// <summary>INFO first for the fields it can hold, then ID3.</summary>
+    /// <summary>
+    /// The value of each field as Rekordbox shows it: from INFO if INFO has a non-empty entry for
+    /// it, otherwise from the "id3 " chunk. Label, BPM and key never have an INFO entry, so they
+    /// always come from "id3 ".
+    /// </summary>
     internal static TagValues Combine(WavTagParts parts)
     {
         var id3Values = parts.Id3 is { } tag ? Id3FieldMap.Read(tag.Frames, tag.Version) : TagValues.Empty;
-        return new TagValues(Enum.GetValues<TagField>().Select(field =>
+        var values = new Dictionary<TagField, string>();
+        foreach (var field in Enum.GetValues<TagField>())
         {
-            var infoValue = InfoChunk.IdFor(field) is { } id && parts.Info?.FirstOrDefault(e => e.Id == id) is { } entry
-                ? InfoChunk.Decode(entry.Value)
-                : null;
-            return new KeyValuePair<TagField, string>(field, string.IsNullOrEmpty(infoValue) ? id3Values[field] ?? "" : infoValue);
-        }));
+            var value = InfoValue(parts.Info, field);
+            if (string.IsNullOrEmpty(value))
+            {
+                value = id3Values[field];
+            }
+
+            if (value is not null)
+            {
+                values[field] = value;
+            }
+        }
+
+        return new TagValues(values);
+    }
+
+    /// <summary>The decoded INFO entry for <paramref name="field"/>, or null if INFO has none (or cannot hold the field).</summary>
+    private static string? InfoValue(List<InfoEntry>? info, TagField field)
+    {
+        if (info is null || InfoChunk.IdFor(field) is not { } id)
+        {
+            return null;
+        }
+
+        var entry = info.FirstOrDefault(e => e.Id == id);
+        return entry is null ? null : InfoChunk.Decode(entry.Value);
     }
 
     internal static bool IsId3Chunk(RiffChunk chunk) => chunk.Id is "id3 " or "ID3 ";

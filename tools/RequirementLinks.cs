@@ -1,4 +1,4 @@
-// Links to requirements and decisions in the documentation and the code.
+// Links to requirements and decisions in the documentation and the code, and broken links.
 //
 // Every requirement (REQ-NNN) and open decision (OPEN-X) in docs/requirements.md gets an anchor.
 // Every mention of one, and of an architecture decision record (ADR-NNNN), links to it:
@@ -12,6 +12,12 @@
 //
 // Mentions inside code (`...`, <c>...</c>, fenced blocks), inside existing links, and in Markdown
 // headings are left alone.
+//
+// Also checked:
+// - relative links in Markdown point to existing files;
+// - GitHub links to this repository in code comments point to existing files (and known anchors);
+// - code comments refer to docs by GitHub link, not by a bare path like docs/formats/id3.md
+//   (--fix turns such paths into links).
 
 using System.Text;
 using System.Text.RegularExpressions;
@@ -47,6 +53,9 @@ var xmlDocToken = new Regex(@"(?<code><c>.*?</c>)|(?<link><see\b[^>]*?(?:/>|>.*?
 var requirementTarget = new Regex(@"requirements\.md#(?<anchor>[a-z0-9-]+)(?:""|$)|^#(?<anchor>[a-z0-9-]+)$");
 var adrTarget = new Regex(@"adr/(?<file>\d{4}-[^/""#)]+\.md)|^(?<file>\d{4}-[^/""#)]+\.md)$");
 
+var repositoryUrl = new Regex(@"https://github\.com/thomaswening/CrateEdit/blob/main/(?<path>[^\s""#)<>]+?)(?:#(?<anchor>[\w-]+))?(?=[\s""<>)]|$|\.(?:\s|$))");
+var bareDocPath = new Regex(@"(?<![\w/.\-])docs/[\w./-]+\.md(?:#[\w-]+)?");
+
 var problems = new List<string>();
 
 var markdownFiles = Directory.EnumerateFiles(Path.Combine(root, "docs"), "*.md", SearchOption.AllDirectories)
@@ -64,6 +73,7 @@ var codeFiles = new[] { "src", "tests" }
 foreach (var file in codeFiles.Order(StringComparer.Ordinal))
 {
     ProcessFile(file, isMarkdown: false);
+    ProcessCodeCommentLinks(file);
 }
 
 var fixable = problems.Count(IsFixable);
@@ -227,6 +237,69 @@ void CheckLink(string file, int lineIndex, string link, string target, bool isRe
     if (adrTarget.Match(target) is { Success: true } adr && !adrs.ContainsValue(adr.Groups["file"].Value))
     {
         problems.Add($"{Describe(file, lineIndex)}: link to unknown decision record {adr.Groups["file"].Value}");
+    }
+
+    // Relative links in Markdown must point to an existing file or folder.
+    var isRelative = !target.StartsWith('#') && !target.Contains("://", StringComparison.Ordinal) &&
+                     !target.StartsWith("mailto:", StringComparison.Ordinal) && !target.StartsWith('<');
+    if (file.EndsWith(".md", StringComparison.Ordinal) && isRelative)
+    {
+        var path = target.Split('#')[0];
+        var resolved = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(file)!, path));
+        if (path.Length > 0 && !File.Exists(resolved) && !Directory.Exists(resolved))
+        {
+            problems.Add($"{Describe(file, lineIndex)}: broken link to {target}");
+        }
+    }
+}
+
+// Checks GitHub links in code comments and turns bare doc paths into links.
+void ProcessCodeCommentLinks(string file)
+{
+    var lines = File.ReadAllLines(file);
+    var changed = false;
+    for (var i = 0; i < lines.Length; i++)
+    {
+        var commentStart = lines[i].IndexOf("//", StringComparison.Ordinal);
+        if (commentStart < 0)
+        {
+            continue;
+        }
+
+        var code = lines[i][..commentStart];
+        var comment = lines[i][commentStart..];
+        foreach (Match url in repositoryUrl.Matches(comment))
+        {
+            var target = url.Groups["path"].Value;
+            if (!File.Exists(Path.Combine(root, target)) && !Directory.Exists(Path.Combine(root, target)))
+            {
+                problems.Add($"{Describe(file, i)}: broken link to {target}");
+            }
+            else if (target == "docs/requirements.md" && url.Groups["anchor"].Success)
+            {
+                var id = url.Groups["anchor"].Value.ToUpperInvariant();
+                if (Regex.IsMatch(id, @"^(REQ-\d{3}|OPEN-[A-Z])$") && !requirements.Contains(id))
+                {
+                    problems.Add($"{Describe(file, i)}: link to unknown {id}");
+                }
+            }
+        }
+
+        var linked = bareDocPath.Replace(comment, match =>
+        {
+            problems.Add($"{Describe(file, i)}: {match.Value} is not linked");
+            return GitHubBase + match.Value;
+        });
+        if (linked != comment)
+        {
+            lines[i] = code + linked;
+            changed = true;
+        }
+    }
+
+    if (fix && changed)
+    {
+        File.WriteAllText(file, string.Join('\n', lines) + "\n", new UTF8Encoding(false));
     }
 }
 

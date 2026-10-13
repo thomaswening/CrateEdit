@@ -4,7 +4,7 @@ using CrateEdit.Core.Results;
 
 namespace CrateEdit.Core.Tags.Id3;
 
-// Byte layout of ID3v2 tags, with an annotated example: docs/formats/id3.md
+// Byte layout of ID3v2 tags, with an annotated example: https://github.com/thomaswening/CrateEdit/blob/main/docs/formats/id3.md
 
 /// <summary>One ID3v2 frame, kept as raw bytes so it can be written back unchanged.</summary>
 internal sealed record Id3v2Frame(string Id, ushort Flags, byte[] Body)

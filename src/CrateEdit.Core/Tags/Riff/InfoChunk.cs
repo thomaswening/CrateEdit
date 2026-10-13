@@ -67,6 +67,9 @@ internal static class InfoChunk
             result.AddRange(Encoding.ASCII.GetBytes(entry.Id));
             result.AddRange(size);
             result.AddRange(entry.Value);
+
+            // Like chunks, INFO entries start at even offsets: an odd-sized value is followed by
+            // one zero pad byte, which is not counted in the entry size.
             if ((entry.Value.Length & 1) == 1)
             {
                 result.Add(0);

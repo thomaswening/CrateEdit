@@ -13,7 +13,7 @@ internal sealed record RawChunk(string Id, long Offset, byte[] Body)
 
 /// <summary>
 /// Builds and parses synthetic WAV files independently of the production code (see
-/// docs/formats/wav.md). Audio is random bytes that the tag code must copy unchanged.
+/// https://github.com/thomaswening/CrateEdit/blob/main/docs/formats/wav.md). Audio is random bytes that the tag code must copy unchanged.
 /// </summary>
 internal static class WavFixture
 {

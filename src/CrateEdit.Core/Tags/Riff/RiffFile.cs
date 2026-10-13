@@ -4,7 +4,7 @@ using CrateEdit.Core.Results;
 
 namespace CrateEdit.Core.Tags.Riff;
 
-// Byte layout of WAV files: docs/formats/wav.md
+// Byte layout of WAV files: https://github.com/thomaswening/CrateEdit/blob/main/docs/formats/wav.md
 
 /// <summary>
 /// One chunk of a RIFF file: a 4-character id, a 32-bit little-endian size, the body, and a pad

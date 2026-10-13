@@ -48,6 +48,11 @@ dotnet run tools/RequirementLinks.cs -- --fix
 
 and it adds missing anchors and links. CI runs the same tool with `--check` and fails on unlinked mentions, links to unknown requirements or decision records, and mentions of ones that do not exist.
 
+The same check guards against broken links in general:
+- relative links in Markdown must point to existing files;
+- GitHub links to this repository in code comments must point to existing files;
+- code comments refer to docs by GitHub link (e.g. `https://github.com/thomaswening/CrateEdit/blob/main/docs/formats/wav.md`), never by a bare path. `--fix` converts bare paths.
+
 ## Architecture documentation
 - [architecture.md](architecture.md) is kept current: a PR that adds or changes a building block, dependency rule or key concept updates it in the same PR.
 - Significant decisions (technology choices, data formats, safety mechanisms, anything hard to reverse) get an [Architecture Decision Record](adr/) in the PR that makes them. A changed decision gets a new ADR that supersedes the old one.

@@ -28,11 +28,15 @@ public enum AudioFormat
 /// <summary>Determines a file's format.</summary>
 public static class AudioFormats
 {
-    /// <summary>The format of <paramref name="path"/> by its extension, or null if unsupported.</summary>
-    public static AudioFormat? Detect(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+    /// <summary>The file extensions of each supported format; case does not matter.</summary>
+    private static readonly Dictionary<string, AudioFormat> FormatsByExtension = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".mp3" => AudioFormat.Mp3,
-        ".wav" or ".wave" => AudioFormat.Wav,
-        _ => null,
+        [".mp3"] = AudioFormat.Mp3,
+        [".wav"] = AudioFormat.Wav,
+        [".wave"] = AudioFormat.Wav,
     };
+
+    /// <summary>The format of <paramref name="path"/> by its extension, or null if unsupported.</summary>
+    public static AudioFormat? Detect(string path) =>
+        FormatsByExtension.TryGetValue(Path.GetExtension(path), out var format) ? format : null;
 }
