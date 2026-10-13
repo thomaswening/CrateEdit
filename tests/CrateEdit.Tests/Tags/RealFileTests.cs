@@ -40,11 +40,13 @@ public class RealFileTests : Mp3TagTestBase
         var editedIds = new[] { "TPE1", "TIT2", "TALB", "TCON", "TPUB", "TBPM", "TKEY", "COMM", before.Version == 4 ? "TDRC" : "TYER" };
         AssertOnlyEdited(before, after, editedIds);
 
-        // Comments other than the edited one keep their bytes.
+        // Only the plain comment (no description) is the comment field. Comments with a
+        // description, e.g. a store's "ID3v1 Comment", keep their bytes; a plain comment is added
+        // if the file had none (ADR-0012).
         var commentsBefore = before.Frames.Where(f => f.Id == "COMM").ToList();
         var commentsAfter = after.Frames.Where(f => f.Id == "COMM").ToList();
-        Assert.Equal(Math.Max(commentsBefore.Count, 1), commentsAfter.Count);
-        Assert.True(commentsAfter.Count(a => commentsBefore.Any(b => b.SameBytesAs(a))) >= commentsBefore.Count - 1);
+        Assert.All(commentsBefore.Where(c => !IsPlainComment(c)), c => Assert.Contains(commentsAfter, a => a.SameBytesAs(c)));
+        Assert.Single(commentsAfter, IsPlainComment);
 
         var reread = Read(edited).Values;
         Assert.All(changes, change => Assert.Equal(change.Value, reread[change.Key]));
@@ -120,6 +122,28 @@ public class RealFileTests : Mp3TagTestBase
                 Assert.True(chunk.SameBytesAs(after.Single(c => c.Id == chunk.Id)), $"{chunk} changed.");
             }
 
+            // Inside the tag chunks, everything that is not one of the edited fields must survive,
+            // e.g. Traktor's "NITR" INFO entry and Serato's GEOB frames.
+            string[] infoFieldIds = ["INAM", "IART", "IPRD", "IGNR", "ICMT", "ICRD"];
+            if (before.SingleOrDefault(c => c.Id == "LIST") is { } infoBefore)
+            {
+                var entriesAfter = WavFixture.InfoEntries(after.Single(c => c.Id == "LIST").Body);
+                foreach (var (id, value) in WavFixture.InfoEntries(infoBefore.Body).Where(e => !infoFieldIds.Contains(e.Key)))
+                {
+                    Assert.True(entriesAfter.TryGetValue(id, out var kept) && kept.AsSpan().SequenceEqual(value), $"INFO entry {id} changed.");
+                }
+            }
+
+            string[] id3FieldIds = ["TPE1", "TIT2", "TALB", "TCON", "TPUB", "TBPM", "TKEY", "COMM", "TYER", "TDRC"];
+            if (before.SingleOrDefault(c => c.Id is "id3 " or "ID3 ") is { } id3Before)
+            {
+                var framesAfter = WavFixture.Id3Frames(after.Single(c => c.Id == id3Before.Id).Body);
+                foreach (var frame in WavFixture.Id3Frames(id3Before.Body).Where(f => !id3FieldIds.Contains(f.Id)))
+                {
+                    Assert.Contains(framesAfter, kept => kept.SameBytesAs(frame));
+                }
+            }
+
             var values = TagReader.Read(path).Values;
             Assert.All(changes, change => Assert.Equal(change.Value, values[change.Key]));
         }
@@ -127,5 +151,17 @@ public class RealFileTests : Mp3TagTestBase
         {
             Directory.Delete(dir, recursive: true);
         }
+    }
+
+    /// <summary>
+    /// A comment frame whose description is empty: after the encoding byte and the 3-byte language
+    /// comes the terminator right away (for UTF-16, optionally preceded by a byte-order mark).
+    /// </summary>
+    private static bool IsPlainComment(RawFrame comment)
+    {
+        var afterLanguage = comment.Body.AsSpan(4);
+        return comment.Body[0] is 1 or 2
+            ? afterLanguage.StartsWith((ReadOnlySpan<byte>)[0, 0]) || afterLanguage[2..].StartsWith((ReadOnlySpan<byte>)[0, 0])
+            : afterLanguage.StartsWith((ReadOnlySpan<byte>)[0]);
     }
 }

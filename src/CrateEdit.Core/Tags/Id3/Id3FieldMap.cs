@@ -10,9 +10,6 @@ internal static class Id3FieldMap
     private const string CommentFrameId = "COMM";
     private const string DefaultCommentLanguage = "eng";
 
-    // The description some stores use for their main comment.
-    private const string StoreCommentDescription = "ID3v1 Comment";
-
     public static string FrameId(TagField field, int version) => field switch
     {
         TagField.Artist => "TPE1",
@@ -29,9 +26,12 @@ internal static class Id3FieldMap
 
     /// <summary>
     /// The index of the frame that holds <paramref name="field"/>, or -1 if there is none.
-    /// For comments: the comment without a description, else the store comment ("ID3v1 Comment"),
-    /// else the first comment that is not a technical iTunes value (iTunNORM, iTunSMPB, ...).
     /// </summary>
+    /// <remarks>
+    /// The comment is the comment frame without a description: the only one Rekordbox and Serato
+    /// show (manual tests, <see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/adr/0012-plain-comment-frame.md">ADR-0012</see>). Comments with a description, such as a store's "ID3v1
+    /// Comment" or iTunes' "iTunNORM", are other software's data and are never read or changed.
+    /// </remarks>
     public static int FindFrame(IReadOnlyList<Id3v2Frame> frames, TagField field, int version)
     {
         var id = FrameId(field, version);
@@ -40,22 +40,12 @@ internal static class Id3FieldMap
             return IndexOf(frames, f => f.Id == id);
         }
 
-        string? Description(Id3v2Frame frame) =>
-            frame.Id == CommentFrameId ? TryReadComment(frame, version)?.Description : null;
-
-        var index = IndexOf(frames, f => Description(f) is "");
-        if (index < 0)
-        {
-            index = IndexOf(frames, f => Description(f) is StoreCommentDescription);
-        }
-
-        if (index < 0)
-        {
-            index = IndexOf(frames, f => Description(f) is { } d && !d.StartsWith("iTun", StringComparison.Ordinal));
-        }
-
-        return index;
+        return IndexOf(frames, f => IsPlainComment(f, version));
     }
+
+    /// <summary>A comment frame with an empty description: the one DJ software shows as "Comment".</summary>
+    private static bool IsPlainComment(Id3v2Frame frame, int version) =>
+        frame.Id == CommentFrameId && TryReadComment(frame, version) is { Description: "" };
 
     /// <summary>Why a field's frame cannot be edited safely, or null if it can.</summary>
     public static TagNotWritable? CheckEditable(IReadOnlyList<Id3v2Frame> frames, TagField field, int version)

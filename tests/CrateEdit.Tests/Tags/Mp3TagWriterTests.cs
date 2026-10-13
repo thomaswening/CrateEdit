@@ -186,13 +186,19 @@ public class Mp3TagWriterTests : Mp3TagTestBase
     }
 
     [Fact]
-    public void Store_comment_is_used_when_there_is_no_plain_comment()
+    [Trait("Req", "REQ-006")]
+    public void Store_comment_is_neither_shown_nor_changed_and_a_plain_comment_is_added()
     {
-        var source = Mp3Fixture.Build(4, [Frames.Comment("ID3v1 Comment", "Purchased at Beatport", encoding: 0)]);
+        // Rekordbox and Serato show only the comment without a description (manual tests, ADR-0012).
+        var store = Frames.Comment("ID3v1 Comment", "Purchased at Beatport", encoding: 0);
+        var source = Mp3Fixture.Build(4, [store]);
 
-        Assert.Equal("Purchased at Beatport", Read(source).Values[TagField.Comment]);
-        var after = Mp3Fixture.Parse(Edit(source, TagField.Comment, "Edited"));
-        Assert.Equal(Frames.Comment("ID3v1 Comment", "Edited", encoding: 0).Body, Assert.Single(after.Frames).Body);
+        Assert.Null(Read(source).Values[TagField.Comment]);
+        var edited = Edit(source, TagField.Comment, "Edited");
+        var after = Mp3Fixture.Parse(edited);
+        Assert.Equal(store.Body, after.Frames[0].Body);
+        Assert.Equal(Frames.Comment("", "Edited", encoding: 0).Body[..^1], after.Frames[1].Body);
+        Assert.Equal("Edited", Read(edited).Values[TagField.Comment]);
     }
 
     [Fact]

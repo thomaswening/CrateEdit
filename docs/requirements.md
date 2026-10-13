@@ -289,7 +289,7 @@ Status: Adds [REQ-131](#req-131) (fields not shown by DJ software) and resolves 
 
 <a id="req-129"></a>**REQ-129 — Language-independent data (SHALL).** Persisted data (index, staging, saved filters, shortcuts) and diagnostic logs SHALL NOT depend on the UI language, so that changing the language does not affect saved data and logs remain readable for troubleshooting.
 
-<a id="req-131"></a>**REQ-131 — Fields not shown by DJ software (SHOULD).** WHEN the user edits a field that the user's DJ software does not read from the file's format (for Rekordbox: label, BPM and key of WAV files, see [ADR-0011](adr/0011-wav-tagging.md)), the application SHOULD indicate that the change will be saved in the file but not shown by that software.
+<a id="req-131"></a>**REQ-131 — Fields not shown by DJ software (SHOULD).** WHEN the user edits a field that the user's DJ software does not read from the file's format (for Rekordbox: label, BPM and key of WAV files, see [ADR-0011](adr/0011-wav-tagging.md), and BPM of any file, since Rekordbox takes BPM only from its own analysis), the application SHOULD indicate that the change will be saved in the file but not shown by that software.
 
 ## 13. Deferred capabilities and unresolved decisions
 

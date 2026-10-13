@@ -183,16 +183,17 @@ Everything CrateEdit owns lives in the app data folder (`%LOCALAPPDATA%\CrateEdi
 | [0005](adr/0005-taglibsharp.md) | TagLib# for tag reading and writing | Superseded by 0008 |
 | [0006](adr/0006-gpl-license.md) | GPL-3.0 license | Accepted |
 | [0007](adr/0007-localization-and-text-matching.md) | Localization with resource files; central text-matching rules | Accepted |
-| [0008](adr/0008-own-id3v2-frame-editor.md) | Own frame-level ID3v2 editor instead of a tag library | Proposed |
+| [0008](adr/0008-own-id3v2-frame-editor.md) | Own frame-level ID3v2 editor instead of a tag library | Accepted |
 | [0009](adr/0009-result-pattern-and-typed-errors.md) | Results with typed errors for expected failures | Proposed |
 | [0010](adr/0010-safe-write-technique.md) | Safe write technique: temp file, recovery record, replace, verify | Proposed |
-| [0011](adr/0011-wav-tagging.md) | WAV tagging: INFO for Rekordbox, id3 for everything | Proposed |
+| [0011](adr/0011-wav-tagging.md) | WAV tagging: INFO for Rekordbox, id3 for everything | Accepted |
+| [0012](adr/0012-plain-comment-frame.md) | The comment field is the comment frame without a description | Accepted |
 
 ## 9. Risks
 
 | Risk | Mitigation |
 |---|---|
-| A tag write damages proprietary DJ data (cues, beatgrids, GEOB) | Own frame-level editor that copies non-edited frames as raw bytes ([ADR-0008](adr/0008-own-id3v2-frame-editor.md)); byte-level preservation tests on synthetic Serato/Traktor frames and real files; still to be confirmed with files analyzed by Serato or Traktor |
+| A tag write damages proprietary DJ data (cues, beatgrids, GEOB) | Own frame-level editor that copies non-edited frames as raw bytes ([ADR-0008](adr/0008-own-id3v2-frame-editor.md)); byte-level preservation tests on synthetic Serato/Traktor frames and real files; confirmed with files analyzed by Serato and Traktor |
 | WAV tags written in a form DJ software does not read | Phase 1 spike and manual checks in each DJ application ([OPEN-D](requirements.md#open-d)) |
 | Atomic replace behaves differently on cloud-sync mounts | Spike done: `File.Replace` works on Google Drive but is not crash-atomic there (nor on FAT32/exFAT); covered by local recovery material, verification and reconciliation ([ADR-0010](adr/0010-safe-write-technique.md)) |
 | Other software (DJ applications, players) keeps files open and blocks writes | Treated as a transient failure with bounded retry and a clear report that names the program holding the file where Windows can tell (Restart Manager); CrateEdit's own player opens files permissively |

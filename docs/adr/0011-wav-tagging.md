@@ -1,6 +1,6 @@
 # ADR-0011: WAV tagging: INFO for Rekordbox, id3 for everything
 
-- **Status:** Proposed
+- **Status:** Accepted (13 Oct 2026, after a CrateEdit-edited WAV showed correctly in Rekordbox)
 - **Date:** 2026-10-13
 
 ## Context
@@ -38,4 +38,3 @@ Other software reads the "id3 " chunk. The owner's only WAV has both chunks with
 - **Edits to label, BPM and key of WAV files are not visible in Rekordbox.** The UI should say so ([REQ-131](../requirements.md#req-131)).
 - **Two chunks hold overlapping values.** Software that updates only one of them leaves them out of sync. CrateEdit shows the INFO value, as Rekordbox does, and the next edit of that field brings both back in line.
 - **Creating a missing chunk writes values the user did not edit.** These are the values already shown, so nothing visible changes in CrateEdit.
-- **Status stays Proposed** until the manual check in Rekordbox with an edited WAV passes ([manual verification](../manual-verification.md)).
