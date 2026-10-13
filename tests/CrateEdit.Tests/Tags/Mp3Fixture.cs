@@ -8,7 +8,55 @@ internal sealed record RawFrame(string Id, ushort Flags, byte[] Body)
 {
     public bool SameBytesAs(RawFrame other) => Id == other.Id && Flags == other.Flags && Body.AsSpan().SequenceEqual(other.Body);
 
+    /// <summary>The text encoding of a text or comment frame: its first body byte.</summary>
+    public byte TextEncoding => Body[0];
+
+    /// <summary>
+    /// A comment frame whose description is empty: after the encoding byte and the 3-byte language
+    /// comes the terminator right away (for UTF-16, optionally preceded by a byte-order mark).
+    /// </summary>
+    public bool IsCommentWithoutDescription
+    {
+        get
+        {
+            if (Id != "COMM")
+            {
+                return false;
+            }
+
+            var afterLanguage = Body.AsSpan(4);
+            return TextEncoding is TextEncodings.Utf16 or TextEncodings.Utf16BigEndian
+                ? afterLanguage.StartsWith((ReadOnlySpan<byte>)[0, 0]) || afterLanguage[2..].StartsWith((ReadOnlySpan<byte>)[0, 0])
+                : afterLanguage.StartsWith((ReadOnlySpan<byte>)[0]);
+        }
+    }
+
+    /// <summary>The value of a text frame, decoded, without terminator or byte-order mark.</summary>
+    public string Text
+    {
+        get
+        {
+            var encoding = TextEncoding switch
+            {
+                TextEncodings.Latin1 => Encoding.Latin1,
+                TextEncodings.Utf16 => Encoding.Unicode,
+                TextEncodings.Utf16BigEndian => Encoding.BigEndianUnicode,
+                _ => Encoding.UTF8,
+            };
+            return encoding.GetString(Body, 1, Body.Length - 1).TrimStart('﻿').TrimEnd('\0');
+        }
+    }
+
     public override string ToString() => $"{Id} ({Body.Length} bytes)";
+}
+
+/// <summary>The text encodings of ID3v2 text frames (first byte of the frame body).</summary>
+internal static class TextEncodings
+{
+    public const byte Latin1 = 0;
+    public const byte Utf16 = 1;
+    public const byte Utf16BigEndian = 2;
+    public const byte Utf8 = 3;
 }
 
 /// <summary>
@@ -28,6 +76,13 @@ internal static class Mp3Fixture
         var body = new List<byte>();
         foreach (var frame in frames)
         {
+            // A UTF-8 frame in ID3v2.3 is invalid, so a test using one would not test what it claims.
+            var hasTextEncoding = frame.Id.StartsWith('T') || frame.Id == "COMM";
+            if (version == 3 && hasTextEncoding && frame.TextEncoding == TextEncodings.Utf8)
+            {
+                throw new ArgumentException($"{frame.Id}: ID3v2.3 has no UTF-8; use TextEncodings.Latin1 or Utf16.");
+            }
+
             body.AddRange(Encoding.ASCII.GetBytes(frame.Id));
             var size = new byte[4];
             if (version == 4)
@@ -53,6 +108,15 @@ internal static class Mp3Fixture
         WriteSynchsafe(header.AsSpan(6), body.Count);
 
         return [.. header, .. body];
+    }
+
+    /// <summary>A copy of the file with a non-zero byte at the end of the tag's padding.</summary>
+    public static byte[] WithDataInPadding(byte[] file)
+    {
+        var copy = file.ToArray();
+        var lastPaddingByte = 10 + Parse(file).TagSize - 1;
+        copy[lastPaddingByte] = 0x42;
+        return copy;
     }
 
     public static byte[] BuildWithoutId3v2(int audioLength = 20_000, byte[]? id3v1 = null) => [.. Audio(audioLength), .. id3v1 ?? []];
@@ -105,7 +169,34 @@ internal static class Mp3Fixture
     }
 }
 
-internal sealed record ParsedMp3(int? Version, int TagSize, List<RawFrame> Frames, byte[] Audio, byte[]? Id3v1);
+internal sealed record ParsedMp3(int? Version, int TagSize, List<RawFrame> Frames, byte[] Audio, byte[]? Id3v1)
+{
+    public IEnumerable<string> FrameIds => Frames.Select(f => f.Id);
+
+    /// <summary>The only frame with this ID; fails the test if there is none or more than one.</summary>
+    public RawFrame Frame(string id) => Assert.Single(Frames, f => f.Id == id);
+
+    public IEnumerable<RawFrame> FramesWithId(string id) => Frames.Where(f => f.Id == id);
+
+    public bool HasFrame(string id) => Frames.Any(f => f.Id == id);
+
+    /// <summary>Comment frames with a description: other software's data, such as a store's "ID3v1 Comment".</summary>
+    public IEnumerable<RawFrame> CommentsWithDescription => FramesWithId("COMM").Where(f => !f.IsCommentWithoutDescription);
+
+    public IEnumerable<RawFrame> CommentsWithoutDescription => Frames.Where(f => f.IsCommentWithoutDescription);
+
+    /// <summary>The ID3v1 tag at the end of the file, decoded; fails the test if there is none.</summary>
+    public ParsedId3v1 ParsedId3v1 => ParsedId3v1.From(Assert.IsType<byte[]>(Id3v1));
+}
+
+/// <summary>The fields of a 128-byte ID3v1.1 tag, with padding removed.</summary>
+internal sealed record ParsedId3v1(string Title, string Artist, byte Track, byte Genre)
+{
+    public static ParsedId3v1 From(byte[] tag) =>
+        new(Field(tag, 3), Field(tag, 33), tag[126], tag[127]);
+
+    private static string Field(byte[] tag, int offset) => Encoding.Latin1.GetString(tag, offset, 30).TrimEnd('\0');
+}
 
 /// <summary>Frame bodies resembling real files: store downloads and DJ software data.</summary>
 internal static class Frames
@@ -116,8 +207,20 @@ internal static class Frames
     public static RawFrame Txxx(string description, string value) =>
         new("TXXX", 0, [3, .. Encoding.UTF8.GetBytes(description), 0, .. Encoding.UTF8.GetBytes(value), 0]);
 
-    public static RawFrame Comment(string description, string value, byte encoding = 3, string language = "eng") =>
-        new("COMM", 0, [encoding, .. Encoding.Latin1.GetBytes(language), .. Encode(description, encoding), .. Terminator(encoding), .. Encode(value, encoding), .. Terminator(encoding)]);
+    public static RawFrame Comment(string description, string value, byte encoding = 3, string language = "eng", bool terminated = true) =>
+        new("COMM", 0,
+        [
+            encoding, .. Encoding.Latin1.GetBytes(language),
+            .. Encode(description, encoding), .. Terminator(encoding),
+            .. Encode(value, encoding), .. terminated ? Terminator(encoding) : [],
+        ]);
+
+    /// <summary>Text frame with several values, as ID3v2.4 allows (UTF-8, separated by a null byte).</summary>
+    public static RawFrame MultiValueText(string id, params string[] values) =>
+        new(id, 0, [TextEncodings.Utf8, .. Encoding.UTF8.GetBytes(string.Join('\0', values))]);
+
+    /// <summary>The same frame with compression flagged (ID3v2.4 format flag bit 3).</summary>
+    public static RawFrame Compressed(RawFrame frame) => frame with { Flags = 0x0008 };
 
     /// <summary>Beatport writes a UFID with an owner but no identifier.</summary>
     public static RawFrame UfidOwnerOnly(string owner) => new("UFID", 0, [.. Encoding.Latin1.GetBytes(owner), 0]);
