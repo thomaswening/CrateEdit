@@ -1,8 +1,9 @@
 # ADR-0008: Own frame-level ID3v2 editor instead of a tag library
 
-- **Status:** Proposed
+- **Status:** Accepted (13 Oct 2026, after edits of files analyzed by Serato and Traktor kept all cue points and loops)
 - **Date:** 2026-10-12
 - **Supersedes:** [ADR-0005](0005-taglibsharp.md)
+- **Amended by:** [ADR-0012](0012-plain-comment-frame.md) (comment rule)
 
 ## Context
 Background on the byte layout of MP3 tags: [ID3 format guide](../formats/id3.md).
@@ -20,7 +21,7 @@ CrateEdit reads and writes ID3v2.3 and ID3v2.4 tags with its own small frame-lev
 - **Field mapping** (agreed with the owner):
   - Fields map to the standard frames: TPE1, TIT2, TALB, TCON, TPUB, TBPM, TKEY, COMM, and TDRC (v2.4) or TYER (v2.3).
   - Store duplicates such as `TXXX:label` or `TXXX:initial_key` are never touched.
-  - **Comment:** the comment without a description is used; if there is none, the store comment ("ID3v1 Comment"); otherwise the first comment that is not a technical iTunes value. Its language and description are kept.
+  - **Comment:** the comment without a description is used; if there is none, the store comment ("ID3v1 Comment"); otherwise the first comment that is not a technical iTunes value. Its language and description are kept. *Changed by [ADR-0012](0012-plain-comment-frame.md): the comment is now only the frame without a description.*
   - **ID3v1:** an existing ID3v1 tag is updated for title, artist, album, year, comment and genre (truncated, Latin-1). An ID3v1 tag is never added.
   - **Encoding:** an edited frame keeps its text encoding if that encoding can represent the new value; otherwise it switches to UTF-8 (v2.4) or UTF-16 (v2.3). Each frame's original terminator style is kept.
   - **Files without a tag** get a new ID3v2.3 tag, the version read by all major DJ software.
@@ -38,4 +39,3 @@ CrateEdit reads and writes ID3v2.3 and ID3v2.4 tags with its own small frame-lev
 - Files with unsupported tag features cannot be edited, and for now show no field values. A read-only fallback may be added if this occurs in practice.
 - TagLib# is no longer a dependency, so its LGPL notice is not needed. Audio properties (duration, bitrate) for the table will need a separate, read-only solution in Phase 2.
 - WAV ([OPEN-D](../requirements.md#open-d)) needs the same approach for RIFF chunks; ID3 handling is shared.
-- Status is Proposed until the owner has reviewed it and real files touched by DJ software have been tested.
