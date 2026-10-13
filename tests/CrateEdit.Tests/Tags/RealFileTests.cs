@@ -89,4 +89,43 @@ public class RealFileTests : Mp3TagTestBase
             Directory.Delete(dir);
         }
     }
+
+    public static TheoryData<string> WavSamples() =>
+        SampleDirectory is { } dir && Directory.Exists(dir) && Directory.GetFiles(dir, "*.wav") is { Length: > 0 } files
+            ? new(files.Select(Path.GetFileName)!)
+            : new("(set CRATEEDIT_SAMPLES to a folder with WAV files to run)");
+
+    [Theory]
+    [MemberData(nameof(WavSamples))]
+    [Trait("Req", "REQ-003")]
+    [Trait("Req", "REQ-088")]
+    public void Safe_write_of_all_fields_of_a_real_wav_keeps_its_audio_and_other_chunks(string fileName)
+    {
+        Assert.SkipWhen(SampleDirectory is null || !File.Exists(Path.Combine(SampleDirectory, fileName)), "No WAV samples.");
+        var dir = Directory.CreateTempSubdirectory("crateedit-wav-real-").FullName;
+        try
+        {
+            var path = Path.Combine(dir, fileName);
+            File.Copy(Path.Combine(SampleDirectory!, fileName), path);
+            var before = WavFixture.Parse(File.ReadAllBytes(path));
+            var changes = Enum.GetValues<TagField>().ToDictionary(f => f, f => (string?)$"Edited {f} ✓");
+
+            var result = new SafeFileWriter(new FileRecoveryStore(Path.Combine(dir, "recovery"))).Write(path, changes);
+
+            Assert.True(result.IsSuccess, result.ToString());
+            var after = WavFixture.Parse(File.ReadAllBytes(path));
+            Assert.Equal(before.Single(c => c.Id == "data").Offset, after.Single(c => c.Id == "data").Offset);
+            foreach (var chunk in before.Where(c => c.Id is not ("LIST" or "id3 ")))
+            {
+                Assert.True(chunk.SameBytesAs(after.Single(c => c.Id == chunk.Id)), $"{chunk} changed.");
+            }
+
+            var values = TagReader.Read(path).Values;
+            Assert.All(changes, change => Assert.Equal(change.Value, values[change.Key]));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
 }

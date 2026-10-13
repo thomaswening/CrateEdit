@@ -13,6 +13,7 @@ public static class TagReader
     public static FileTags Read(string path) => AudioFormats.Detect(path) switch
     {
         AudioFormat.Mp3 => Mp3TagReader.Read(path),
+        AudioFormat.Wav => WavTagReader.Read(path),
         _ => new FileTags(TagValues.Empty, new TagNotWritable(TagProblem.UnsupportedFormat)),
     };
 }
@@ -21,6 +22,7 @@ public static class TagReader
 public enum AudioFormat
 {
     Mp3,
+    Wav,
 }
 
 /// <summary>Determines a file's format.</summary>
@@ -30,6 +32,7 @@ public static class AudioFormats
     public static AudioFormat? Detect(string path) => Path.GetExtension(path).ToLowerInvariant() switch
     {
         ".mp3" => AudioFormat.Mp3,
+        ".wav" or ".wave" => AudioFormat.Wav,
         _ => null,
     };
 }

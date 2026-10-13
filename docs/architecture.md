@@ -103,7 +103,7 @@ flowchart TB
 | **Synchronization** | Initial scan, startup reconciliation, runtime file watching, move/rename detection, unavailable-root handling, activity history. | Planned (Phase 3), identity rules depend on [OPEN-F](requirements.md#open-f) |
 | **Staging** | Staged edits per track and field, the values seen when staging (for conflict detection), staging timestamps, session undo/redo with grouped actions. | Planned (Phase 5) |
 | **Apply pipeline** | The only component that writes audio files: preflight checks, protection against concurrent modification, recovery material, safe write, verification, retry, cancellation, reconciliation after a crash. | Safe write and crash reconciliation implemented (`SafeFileWriter`, `RecoveryReconciler`, [ADR-0010](adr/0010-safe-write-technique.md)); preflight, retry, cancellation and UI in Phases 6–8 |
-| **Tag access** | ([format guide](formats/id3.md)) Maps the 9 logical fields to MP3 (ID3v2) and WAV tags, reads tags, and performs the low-level tag write on behalf of the apply pipeline. Own frame-level ID3v2 editor: only edited frames are rebuilt, all others are copied as raw bytes, and tags that are not fully understood are refused. Each format plugs into the safe write through a small internal interface (read, rewrite, audio layout). | MP3 read/write implemented; WAV depends on [OPEN-D](requirements.md#open-d) ([ADR-0008](adr/0008-own-id3v2-frame-editor.md)) |
+| **Tag access** | ([ID3 guide](formats/id3.md), [WAV guide](formats/wav.md)) Maps the 9 logical fields to MP3 (ID3v2) and WAV tags, reads tags, and performs the low-level tag write on behalf of the apply pipeline. Own frame-level ID3v2 editor: only edited frames are rebuilt, all others are copied as raw bytes, and tags that are not fully understood are refused. Each format plugs into the safe write through a small internal interface (read, rewrite, audio layout). | MP3 and WAV read/write implemented ([ADR-0011](adr/0011-wav-tagging.md) for WAV) ([ADR-0008](adr/0008-own-id3v2-frame-editor.md)) |
 | **Local store** | SQLite database in the app data folder for the index, staging, pending flags, view state and recovery bookkeeping. | Planned (Phase 2) |
 | **Diagnostics** | Local daily log files, 30-day retention, home-folder redaction, no transmission. | Implemented |
 
@@ -186,6 +186,7 @@ Everything CrateEdit owns lives in the app data folder (`%LOCALAPPDATA%\CrateEdi
 | [0008](adr/0008-own-id3v2-frame-editor.md) | Own frame-level ID3v2 editor instead of a tag library | Proposed |
 | [0009](adr/0009-result-pattern-and-typed-errors.md) | Results with typed errors for expected failures | Proposed |
 | [0010](adr/0010-safe-write-technique.md) | Safe write technique: temp file, recovery record, replace, verify | Proposed |
+| [0011](adr/0011-wav-tagging.md) | WAV tagging: INFO for Rekordbox, id3 for everything | Proposed |
 
 ## 9. Risks
 
