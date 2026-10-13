@@ -1,3 +1,4 @@
+using CrateEdit.Core.Results;
 using CrateEdit.Core.Tags.Id3;
 using CrateEdit.Core.Tags.Riff;
 
@@ -18,60 +19,90 @@ public static class WavTagReader
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         var riff = RiffFile.Read(stream);
-        if (riff is null)
+        if (riff.IsFailure)
         {
-            return new FileTags(TagValues.Empty, new TagNotWritable(TagProblem.Malformed, Offset: 0));
+            return new FileTags(TagValues.Empty, (TagNotWritable)riff.Error);
         }
 
-        if (riff.Problem is not null)
-        {
-            return new FileTags(TagValues.Empty, riff.Problem);
-        }
-
-        var (parts, problem) = ReadParts(riff);
-        return problem is not null
-            ? new FileTags(TagValues.Empty, problem)
-            : new FileTags(Combine(parts!), null);
+        var parts = ReadParts(riff.Value);
+        return parts.IsFailure
+            ? new FileTags(TagValues.Empty, (TagNotWritable)parts.Error)
+            : new FileTags(Combine(parts.Value), null);
     }
 
-    internal static (WavTagParts? Parts, TagNotWritable? Problem) ReadParts(RiffFile riff)
+    /// <summary>Finds and parses the tag chunks.</summary>
+    /// <returns>The parts, or <see cref="TagNotWritable"/> if a tag chunk is duplicated or cannot be parsed completely.</returns>
+    internal static Result<WavTagParts> ReadParts(RiffFile riff)
     {
         var infoChunks = riff.Chunks.Where(InfoChunk.IsInfoList).ToList();
         var id3Chunks = riff.Chunks.Where(IsId3Chunk).ToList();
-        if (infoChunks.Count > 1 || id3Chunks.Count > 1)
+
+        // With two copies of a tag chunk it is unclear which one other software reads, and
+        // editing one would leave the other stale. Both duplicated kinds are named for the log.
+        var duplicated = new[] { (infoChunks, "LIST/INFO"), (id3Chunks, "id3") }.Where(c => c.Item1.Count > 1).Select(c => c.Item2).ToList();
+        if (duplicated.Count > 0)
         {
-            // Unclear which one other software reads; editing one would leave the other stale.
-            return (null, new TagNotWritable(TagProblem.Malformed, infoChunks.Count > 1 ? "LIST" : "id3 "));
+            return new TagNotWritable(TagProblem.Malformed, string.Join(", ", duplicated));
         }
 
         List<InfoEntry>? info = null;
         if (infoChunks is [var infoChunk])
         {
-            info = InfoChunk.Parse(infoChunk.Body!);
-            if (info is null)
+            var parsed = ReadInfoChunk(infoChunk);
+            if (parsed.IsFailure)
             {
-                return (null, new TagNotWritable(TagProblem.Malformed, "LIST", infoChunk.Offset));
+                return parsed.Error;
             }
+
+            info = parsed.Value;
         }
 
         Id3v2Tag? id3 = null;
         if (id3Chunks is [var id3Chunk])
         {
-            var body = id3Chunk.Body!;
-            if (Id3v2Header.TryParse(body) is not { } header || header.TotalSizeBytes > body.Length ||
-                body.AsSpan(header.TotalSizeBytes).ContainsAnyExcept((byte)0))
+            var parsed = ReadId3Chunk(id3Chunk);
+            if (parsed.IsFailure)
             {
-                return (null, new TagNotWritable(TagProblem.Malformed, id3Chunk.Id, id3Chunk.Offset));
+                return parsed.Error;
             }
 
-            id3 = Id3v2Tag.Parse(header, body);
-            if (id3.Problem is { } id3Problem)
-            {
-                return (null, id3Problem);
-            }
+            id3 = parsed.Value;
         }
 
-        return (new WavTagParts(infoChunks.FirstOrDefault(), info, id3Chunks.FirstOrDefault(), id3), null);
+        return new WavTagParts(infoChunks.FirstOrDefault(), info, id3Chunks.FirstOrDefault(), id3);
+    }
+
+    private static Result<List<InfoEntry>> ReadInfoChunk(RiffChunk chunk) =>
+        InfoChunk.Parse(chunk.Body!) is { } entries
+            ? entries
+            : new TagNotWritable(TagProblem.Malformed, chunk.Id, chunk.Offset);
+
+    private static Result<Id3v2Tag> ReadId3Chunk(RiffChunk chunk)
+    {
+        if (!IsCompleteId3Tag(chunk.Body!, out var header))
+        {
+            return new TagNotWritable(TagProblem.Malformed, chunk.Id, chunk.Offset);
+        }
+
+        var tag = Id3v2Tag.Parse(header, chunk.Body!);
+        return tag.Problem is { } problem ? problem : tag;
+    }
+
+    /// <summary>
+    /// The chunk body must start with a valid ID3v2 header, contain the whole tag that header
+    /// announces, and have nothing but zero padding after it. Otherwise the chunk holds something
+    /// the tag code would not reproduce when rewriting it.
+    /// </summary>
+    private static bool IsCompleteId3Tag(byte[] body, out Id3v2Header header)
+    {
+        if (Id3v2Header.TryParse(body) is not { } parsed || parsed.TotalSizeBytes > body.Length)
+        {
+            header = default;
+            return false;
+        }
+
+        header = parsed;
+        return !body.AsSpan(parsed.TotalSizeBytes).ContainsAnyExcept((byte)0);
     }
 
     /// <summary>INFO first for the fields it can hold, then ID3.</summary>

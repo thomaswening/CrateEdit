@@ -26,29 +26,26 @@ public static class WavTagWriter
     public static Result Rewrite(string sourcePath, string destinationPath, IReadOnlyDictionary<TagField, string?> changes)
     {
         using var source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var riff = RiffFile.Read(source);
-        if (riff is null)
+        var riffResult = RiffFile.Read(source);
+        if (riffResult.IsFailure)
         {
-            return new TagNotWritable(TagProblem.Malformed, Offset: 0);
+            return riffResult.Error;
         }
 
-        if (riff.Problem is { } riffProblem)
+        var riff = riffResult.Value;
+        var partsResult = WavTagReader.ReadParts(riff);
+        if (partsResult.IsFailure)
         {
-            return riffProblem;
+            return partsResult.Error;
         }
 
-        var (parts, partsProblem) = WavTagReader.ReadParts(riff);
-        if (partsProblem is not null)
-        {
-            return partsProblem;
-        }
-
-        var current = WavTagReader.Combine(parts!);
+        var parts = partsResult.Value;
+        var current = WavTagReader.Combine(parts);
         string? Target(TagField field) =>
             changes.TryGetValue(field, out var changed) ? (string.IsNullOrEmpty(changed) ? null : changed) : current[field];
 
         // ID3: edit the existing tag, or create one with all current values.
-        var id3 = parts!.Id3 ?? Id3v2Tag.CreateEmpty();
+        var id3 = parts.Id3 ?? Id3v2Tag.CreateEmpty();
         IReadOnlyList<Id3v2Frame> frames = id3.Frames;
         foreach (var field in parts.Id3 is null ? Enum.GetValues<TagField>() : changes.Keys)
         {

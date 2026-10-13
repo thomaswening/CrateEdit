@@ -24,7 +24,26 @@ public static class Mp3TagReader
         return new FileTags(tag.Problem is null ? Id3FieldMap.Read(tag.Frames, tag.Version) : TagValues.Empty, tag.Problem);
     }
 
+    /// <summary>The ID3v2 tag at the start of the file, or null if the file has none.</summary>
     internal static Id3v2Tag? ReadId3v2(Stream stream)
+    {
+        if (!TryReadHeader(stream, out var header))
+        {
+            return null;
+        }
+
+        var tag = new byte[header.TotalSizeBytes];
+        stream.Position = 0;
+        stream.ReadExactly(tag);
+        return Id3v2Tag.Parse(header, tag);
+    }
+
+    /// <summary>
+    /// True if the file starts with a valid ID3v2 header and the whole tag it announces fits in the
+    /// file. A file that is too short, starts differently, or announces more bytes than it has,
+    /// is treated as having no tag.
+    /// </summary>
+    private static bool TryReadHeader(Stream stream, out Id3v2Header header)
     {
         // On the stack: no heap allocation for these 10 bytes, which are read for every file in the collection.
         Span<byte> headerBytes = stackalloc byte[Id3v2Header.SizeBytes];
@@ -34,14 +53,13 @@ public static class Mp3TagReader
         // ReadAtLeast keeps reading until the buffer is full or the file ends; a file shorter
         // than 10 bytes simply has no tag, so no exception is wanted.
         if (stream.ReadAtLeast(headerBytes, headerBytes.Length, throwOnEndOfStream: false) < headerBytes.Length ||
-            Id3v2Header.TryParse(headerBytes) is not { } header || header.TotalSizeBytes > stream.Length)
+            Id3v2Header.TryParse(headerBytes) is not { } parsed || parsed.TotalSizeBytes > stream.Length)
         {
-            return null;
+            header = default;
+            return false;
         }
 
-        var tag = new byte[header.TotalSizeBytes];
-        stream.Position = 0;
-        stream.ReadExactly(tag);
-        return Id3v2Tag.Parse(header, tag);
+        header = parsed;
+        return true;
     }
 }

@@ -206,6 +206,19 @@ public sealed class WavTagTests : IDisposable
         Assert.Equal(source, File.ReadAllBytes(sourcePath));
     }
 
+    [Fact]
+    [Trait("Req", "REQ-130")]
+    public void Duplicated_info_and_id3_chunks_are_both_named()
+    {
+        var source = WavFixture.Build(WavFixture.Fmt(), WavFixture.Data(),
+            WavFixture.Info(("INAM", "One")), WavFixture.Info(("INAM", "Two")), WavFixture.Id3([]), WavFixture.Id3([]));
+
+        var problem = Read(source).WriteProblem;
+
+        Assert.Equal(TagProblem.Malformed, problem?.Problem);
+        Assert.Equal("LIST/INFO, id3", problem?.FrameId);
+    }
+
     [Theory]
     [InlineData(WriteStep.TempWritten, false)]
     [InlineData(WriteStep.Replaced, true)]

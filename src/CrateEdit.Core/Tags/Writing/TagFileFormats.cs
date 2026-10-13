@@ -84,14 +84,14 @@ internal sealed class WavFileFormat : ITagFileFormat
         using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
             var riff = RiffFile.Read(stream);
-            if (riff is null || riff.Problem is not null)
+            if (riff.IsFailure)
             {
-                throw new EndOfStreamException("Not a readable WAV file.");
+                throw new EndOfStreamException($"Not a readable WAV file: {riff.Error}");
             }
 
-            var data = riff.Data;
+            var data = riff.Value.Data;
             prefixLength = data.BodyOffset;
-            suffixLength = riff.Length - data.BodyOffset - data.Size;
+            suffixLength = riff.Value.Length - data.BodyOffset - data.Size;
         }
 
         return AudioLayout.Read(path, prefixLength, suffixLength);
