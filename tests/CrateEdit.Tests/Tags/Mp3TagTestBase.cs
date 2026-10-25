@@ -45,16 +45,40 @@ public abstract class Mp3TagTestBase : IDisposable
         return (result, result.IsSuccess ? File.ReadAllBytes(destination) : null);
     }
 
-    /// <summary>Asserts that the writer refuses the edit with the given problem.</summary>
-    internal TagNotWritable AssertRefused(byte[] source, TagField field, TagProblem expected)
+    /// <summary>Edits the field and returns why the writer refused; fails the test if it did not refuse.</summary>
+    internal TagNotWritable EditRefused(byte[] source, TagField field)
     {
         var (result, _) = TryEdit(source, new Dictionary<TagField, string?> { [field] = "New" });
-        var error = Assert.IsType<TagNotWritable>(result.Error);
-        Assert.Equal(expected, error.Problem);
-        return error;
+        return Assert.IsType<TagNotWritable>(result.Error);
     }
 
     internal FileTags Read(byte[] file) => Mp3TagReader.Read(WriteFile(file));
+
+    internal string? ReadValue(byte[] file, TagField field) => Read(file).Values[field];
+
+    /// <summary>A change for every field, each to a distinct value such as "Edited Artist".</summary>
+    internal static Dictionary<TagField, string?> EditEveryField(string suffix = "") =>
+        Enum.GetValues<TagField>().ToDictionary(field => field, field => (string?)$"Edited {field}{suffix}");
+
+    /// <summary>Asserts that the file holds every value in <paramref name="expected"/>.</summary>
+    internal void AssertValues(byte[] file, IReadOnlyDictionary<TagField, string?> expected) => AssertValues(Read(file), expected);
+
+    /// <summary>Asserts that the tags hold every value in <paramref name="expected"/>.</summary>
+    internal static void AssertValues(FileTags tags, IReadOnlyDictionary<TagField, string?> expected) =>
+        Assert.All(expected, pair => Assert.Equal(pair.Value, tags.Values[pair.Key]));
+
+    /// <summary>Asserts that both sequences hold byte-identical frames in the same order.</summary>
+    internal static void AssertSameFrames(IEnumerable<RawFrame> expected, IEnumerable<RawFrame> actual) =>
+        Assert.Equal(expected.Select(f => f.Body), actual.Select(f => f.Body));
+
+    /// <summary>Asserts that all frames with the given IDs have the same bodies, in the same order.</summary>
+    internal static void AssertFramesUnchanged(ParsedMp3 before, ParsedMp3 after, params string[] frameIds)
+    {
+        foreach (var id in frameIds)
+        {
+            Assert.Equal(before.FramesWithId(id).Select(f => f.Body), after.FramesWithId(id).Select(f => f.Body));
+        }
+    }
 
     /// <summary>
     /// Asserts that only the frames named in <paramref name="editedFrameIds"/> differ, everything

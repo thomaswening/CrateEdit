@@ -7,8 +7,10 @@ public class ShortcutTests
     [Fact]
     public void Parses_modifiers_and_key()
     {
+        // Act
         var shortcut = Shortcut.Parse("Primary+Shift+L");
 
+        // Assert
         Assert.Equal("L", shortcut.Key);
         Assert.Equal(ShortcutModifiers.Primary | ShortcutModifiers.Shift, shortcut.Modifiers);
     }
@@ -16,19 +18,35 @@ public class ShortcutTests
     [Fact]
     public void Parses_a_key_without_modifiers()
     {
-        Assert.Equal(new Shortcut("F2"), Shortcut.Parse("F2"));
+        // Act
+        var shortcut = Shortcut.Parse("F2");
+
+        // Assert
+        Assert.Equal(new Shortcut("F2"), shortcut);
     }
 
     [Fact]
     public void Round_trips_through_text_in_canonical_order()
     {
-        Assert.Equal("Primary+Shift+Alt+P", Shortcut.Parse("alt+shift+primary+P").ToString());
+        // Arrange
+        var shortcut = Shortcut.Parse("alt+shift+primary+P");
+
+        // Act
+        var text = shortcut.ToString();
+
+        // Assert
+        Assert.Equal("Primary+Shift+Alt+P", text);
     }
 
     [Fact]
     public void Keys_are_compared_case_insensitively()
     {
-        Assert.Equal(Shortcut.Parse("Primary+l"), Shortcut.Parse("Primary+L"));
+        // Act
+        var lowerCase = Shortcut.Parse("Primary+l");
+        var upperCase = Shortcut.Parse("Primary+L");
+
+        // Assert
+        Assert.Equal(lowerCase, upperCase);
     }
 
     [Theory]
@@ -37,6 +55,7 @@ public class ShortcutTests
     [InlineData("Primary+")]
     public void Rejects_invalid_text(string text)
     {
+        // Act and assert
         Assert.ThrowsAny<Exception>(() => Shortcut.Parse(text));
     }
 }

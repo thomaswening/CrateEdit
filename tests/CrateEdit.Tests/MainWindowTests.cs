@@ -30,12 +30,26 @@ public class MainWindowTests
     private static RawInputModifiers PrimaryModifier =>
         OperatingSystem.IsMacOS() ? RawInputModifiers.Meta : RawInputModifiers.Control;
 
+    private static Window ShowWindow(FakeShell shell, CommandRegistry? registry = null)
+    {
+        var window = MainWindowFactory.Create(Paths, registry ?? new CommandRegistry(AppCommands.All), shell);
+        window.Show();
+        return window;
+    }
+
+    private static MenuItem MenuItemFor(Window window, string commandId) =>
+        window.GetLogicalDescendants().OfType<MenuItem>().Single(item => Equals(item.Tag, commandId));
+
+    private static void PressDefaultOpenLogFolderShortcut(Window window) =>
+        window.KeyPressQwerty(PhysicalKey.L, PrimaryModifier | RawInputModifiers.Shift);
+
     [AvaloniaFact]
     public void Main_window_shows_application_name_and_status()
     {
-        var window = MainWindowFactory.Create(Paths, new CommandRegistry(AppCommands.All), new FakeShell());
-        window.Show();
+        // Act
+        var window = ShowWindow(new FakeShell());
 
+        // Assert
         Assert.Equal(AppInfo.Name, window.Title);
         Assert.Equal(Strings.Status_NoCollection, window.FindControl<TextBlock>("StatusBar")!.Text);
     }
@@ -43,41 +57,62 @@ public class MainWindowTests
     [AvaloniaFact]
     public void Default_shortcut_opens_the_log_folder()
     {
+        // Arrange
         var shell = new FakeShell();
-        var window = MainWindowFactory.Create(Paths, new CommandRegistry(AppCommands.All), shell);
-        window.Show();
+        var window = ShowWindow(shell);
 
-        window.KeyPressQwerty(PhysicalKey.L, PrimaryModifier | RawInputModifiers.Shift);
+        // Act
+        PressDefaultOpenLogFolderShortcut(window);
 
+        // Assert
         Assert.Equal([Paths.LogDirectory], shell.OpenedFolders);
+    }
+
+    [AvaloniaFact]
+    [Trait("Req", "REQ-108")]
+    public void Reassigned_shortcut_runs_the_command()
+    {
+        // Arrange
+        var shell = new FakeShell();
+        var registry = new CommandRegistry(AppCommands.All);
+        registry.TryAssign(AppCommands.OpenLogFolder, Shortcut.Parse("Primary+Alt+D"));
+        var window = ShowWindow(shell, registry);
+
+        // Act
+        window.KeyPressQwerty(PhysicalKey.D, PrimaryModifier | RawInputModifiers.Alt);
+
+        // Assert
+        Assert.Single(shell.OpenedFolders);
     }
 
     [AvaloniaFact]
     [Trait("Req", "REQ-108")]
     public void Reassigned_shortcut_replaces_the_default()
     {
+        // Arrange
         var shell = new FakeShell();
         var registry = new CommandRegistry(AppCommands.All);
         registry.TryAssign(AppCommands.OpenLogFolder, Shortcut.Parse("Primary+Alt+D"));
-        var window = MainWindowFactory.Create(Paths, registry, shell);
-        window.Show();
+        var window = ShowWindow(shell, registry);
 
-        window.KeyPressQwerty(PhysicalKey.L, PrimaryModifier | RawInputModifiers.Shift);
+        // Act
+        PressDefaultOpenLogFolderShortcut(window);
+
+        // Assert
         Assert.Empty(shell.OpenedFolders);
-
-        window.KeyPressQwerty(PhysicalKey.D, PrimaryModifier | RawInputModifiers.Alt);
-        Assert.Single(shell.OpenedFolders);
     }
 
     [AvaloniaFact]
     public void Menu_shows_the_configured_shortcut()
     {
+        // Arrange
         var registry = new CommandRegistry(AppCommands.All);
+        var expected = ShortcutBinder.ToKeyGesture(registry.GetShortcut(AppCommands.OpenLogFolder)!);
+
+        // Act
         var window = MainWindowFactory.Create(Paths, registry, new FakeShell());
 
-        var item = window.GetLogicalDescendants().OfType<MenuItem>()
-            .Single(i => Equals(i.Tag, AppCommands.OpenLogFolder));
-
-        Assert.Equal(ShortcutBinder.ToKeyGesture(registry.GetShortcut(AppCommands.OpenLogFolder)!), item.InputGesture);
+        // Assert
+        Assert.Equal(expected, MenuItemFor(window, AppCommands.OpenLogFolder).InputGesture);
     }
 }

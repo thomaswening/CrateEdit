@@ -1,4 +1,5 @@
 using CrateEdit.Core.Tags;
+using CrateEdit.Core.Tags.Id3;
 using CrateEdit.Core.Tags.Writing;
 
 namespace CrateEdit.Tests.Tags;
@@ -7,13 +8,24 @@ public class Mp3TagWriterTests : Mp3TagTestBase
 {
     private static readonly Dictionary<TagField, string> V4FrameIds = new()
     {
-        [TagField.Artist] = "TPE1", [TagField.Title] = "TIT2", [TagField.Album] = "TALB",
-        [TagField.Genre] = "TCON", [TagField.Label] = "TPUB", [TagField.Bpm] = "TBPM",
-        [TagField.Key] = "TKEY", [TagField.Comment] = "COMM", [TagField.Year] = "TDRC",
+        [TagField.Artist] = "TPE1",
+        [TagField.Title] = "TIT2",
+        [TagField.Album] = "TALB",
+        [TagField.Genre] = "TCON",
+        [TagField.Label] = "TPUB",
+        [TagField.Bpm] = "TBPM",
+        [TagField.Key] = "TKEY",
+        [TagField.Comment] = "COMM",
+        [TagField.Year] = "TDRC",
     };
 
-    private static byte[] StoreFileWithDjData(int version = 4, int padding = 4096) =>
-        Mp3Fixture.Build(version, [.. Frames.BeatportLike(), .. Frames.DjSoftwareData()], padding);
+    /// <summary>Frames that belong to DJ software, stores and players, never to CrateEdit.</summary>
+    private static readonly string[] ForeignFrameIds = ["GEOB", "PRIV", "UFID", "TXXX", "APIC", "WOAF"];
+
+    private const string StoreCommentDescription = "ID3v1 Comment";
+
+    private static byte[] StoreFileWithDjData(int padding = 4096) =>
+        Mp3Fixture.Build(4, [.. Frames.BeatportLike(), .. Frames.DjSoftwareData()], padding);
 
     public static TheoryData<TagField> AllFields() => new(Enum.GetValues<TagField>());
 
@@ -23,12 +35,29 @@ public class Mp3TagWriterTests : Mp3TagTestBase
     [Trait("Req", "REQ-130")]
     public void Editing_a_field_leaves_everything_else_byte_identical(TagField field)
     {
+        // Arrange
         var source = StoreFileWithDjData();
 
+        // Act
         var edited = Edit(source, field, "New value 1");
 
+        // Assert
         AssertOnlyEdited(Mp3Fixture.Parse(source), Mp3Fixture.Parse(edited), V4FrameIds[field]);
-        Assert.Equal("New value 1", Read(edited).Values[field]);
+    }
+
+    [Theory]
+    [MemberData(nameof(AllFields))]
+    [Trait("Req", "REQ-130")]
+    public void Edited_value_is_read_back(TagField field)
+    {
+        // Arrange
+        var source = StoreFileWithDjData();
+
+        // Act
+        var edited = Edit(source, field, "New value 1");
+
+        // Assert
+        Assert.Equal("New value 1", ReadValue(edited, field));
     }
 
     [Fact]
@@ -36,39 +65,49 @@ public class Mp3TagWriterTests : Mp3TagTestBase
     [Trait("Req", "REQ-130")]
     public void Editing_all_fields_preserves_dj_software_data_store_frames_and_cover()
     {
+        // Arrange
         var source = StoreFileWithDjData();
-        var changes = Enum.GetValues<TagField>().ToDictionary(f => f, f => (string?)$"Edited {f}");
 
-        var edited = Edit(source, changes);
+        // Act
+        var edited = Edit(source, EditEveryField());
 
+        // Assert
         var before = Mp3Fixture.Parse(source);
         var after = Mp3Fixture.Parse(edited);
         AssertOnlyEdited(before, after, [.. V4FrameIds.Values]);
-        foreach (var id in new[] { "GEOB", "PRIV", "UFID", "TXXX", "APIC", "WOAF" })
-        {
-            Assert.Equal(before.Frames.Where(f => f.Id == id).Select(f => f.Body), after.Frames.Where(f => f.Id == id).Select(f => f.Body));
-        }
+        AssertFramesUnchanged(before, after, ForeignFrameIds);
     }
 
     [Fact]
     [Trait("Req", "REQ-130")]
     public void Edited_frame_stays_in_place_and_new_frames_are_appended()
     {
+        // Arrange
         var source = Mp3Fixture.Build(4, [Frames.Text("TIT2", "Title"), Frames.Text("TPE1", "Artist"), Frames.Picture()]);
+        var changes = new Dictionary<TagField, string?>
+        {
+            [TagField.Artist] = "New",
+            [TagField.Key] = "8A",
+        };
 
-        var after = Mp3Fixture.Parse(Edit(source, new Dictionary<TagField, string?> { [TagField.Artist] = "New", [TagField.Key] = "8A" }));
+        // Act
+        var edited = Edit(source, changes);
 
-        Assert.Equal(["TIT2", "TPE1", "APIC", "TKEY"], after.Frames.Select(f => f.Id));
+        // Assert
+        Assert.Equal(["TIT2", "TPE1", "APIC", "TKEY"], Mp3Fixture.Parse(edited).FrameIds);
     }
 
     [Fact]
     [Trait("Req", "REQ-130")]
     public void Edit_that_fits_in_the_padding_does_not_move_the_audio()
     {
+        // Arrange
         var source = StoreFileWithDjData(padding: 4096);
 
+        // Act
         var edited = Edit(source, TagField.Comment, "A somewhat longer comment than before");
 
+        // Assert
         Assert.Equal(Mp3Fixture.Parse(source).TagSize, Mp3Fixture.Parse(edited).TagSize);
         Assert.Equal(source.Length, edited.Length);
     }
@@ -78,10 +117,14 @@ public class Mp3TagWriterTests : Mp3TagTestBase
     [Trait("Req", "REQ-130")]
     public void Edit_that_does_not_fit_grows_the_tag_and_keeps_audio_intact()
     {
+        // Arrange
         var source = StoreFileWithDjData(padding: 0);
+        var longComment = new string('x', 500);
 
-        var edited = Edit(source, TagField.Comment, new string('x', 500));
+        // Act
+        var edited = Edit(source, TagField.Comment, longComment);
 
+        // Assert
         var before = Mp3Fixture.Parse(source);
         var after = Mp3Fixture.Parse(edited);
         Assert.True(after.TagSize > before.TagSize);
@@ -92,13 +135,17 @@ public class Mp3TagWriterTests : Mp3TagTestBase
     [Trait("Req", "REQ-130")]
     public void Clearing_a_field_removes_its_frame()
     {
+        // Arrange
         var source = StoreFileWithDjData();
 
+        // Act
         var edited = Edit(source, TagField.Label, null);
 
-        Assert.DoesNotContain(Mp3Fixture.Parse(edited).Frames, f => f.Id == "TPUB");
-        Assert.Null(Read(edited).Values[TagField.Label]);
-        AssertOnlyEdited(Mp3Fixture.Parse(source), Mp3Fixture.Parse(edited), "TPUB");
+        // Assert
+        var after = Mp3Fixture.Parse(edited);
+        Assert.False(after.HasFrame("TPUB"));
+        Assert.Null(ReadValue(edited, TagField.Label));
+        AssertOnlyEdited(Mp3Fixture.Parse(source), after, "TPUB");
     }
 
     [Theory]
@@ -110,122 +157,260 @@ public class Mp3TagWriterTests : Mp3TagTestBase
     [InlineData(4, "Ärzte, Beyoncé, Sigur Rós")]
     public void Values_round_trip_in_both_id3_versions(int version, string value)
     {
-        var source = Mp3Fixture.Build(version, [Frames.Text("TPE1", "Old", encoding: 0)]);
+        // Arrange
+        var source = Mp3Fixture.Build(version, [Frames.Text("TPE1", "Old", TextEncodings.Latin1)]);
 
+        // Act
         var edited = Edit(source, TagField.Artist, value);
 
-        Assert.Equal(value, Read(edited).Values[TagField.Artist]);
+        // Assert
+        Assert.Equal(value, ReadValue(edited, TagField.Artist));
     }
 
-    [Fact]
-    public void Keeps_latin1_encoding_when_possible_and_switches_when_needed()
+    [Theory]
+    [InlineData("Röyksopp", TextEncodings.Latin1)]
+    [InlineData("東京", TextEncodings.Utf16)]
+    public void Id3v23_keeps_latin1_when_possible_and_switches_to_utf16_when_needed(string value, byte expectedEncoding)
     {
-        var source = Mp3Fixture.Build(3, [Frames.Text("TPE1", "Old", encoding: 0), Frames.Text("TIT2", "Old", encoding: 0)]);
+        // Arrange
+        var source = Mp3Fixture.Build(3, [Frames.Text("TPE1", "Old", TextEncodings.Latin1)]);
 
-        var after = Mp3Fixture.Parse(Edit(source, new Dictionary<TagField, string?> { [TagField.Artist] = "Röyksopp", [TagField.Title] = "東京" }));
+        // Act
+        var edited = Edit(source, TagField.Artist, value);
 
-        Assert.Equal(0, after.Frames.Single(f => f.Id == "TPE1").Body[0]);
-        Assert.Equal(1, after.Frames.Single(f => f.Id == "TIT2").Body[0]);
+        // Assert
+        Assert.Equal(expectedEncoding, Mp3Fixture.Parse(edited).Frame("TPE1").TextEncoding);
     }
 
-    [Fact]
-    public void Year_uses_tyer_in_id3v23_and_tdrc_in_id3v24()
+    [Theory]
+    [InlineData(3, "TYER")]
+    [InlineData(4, "TDRC")]
+    public void Year_is_written_to_the_frame_of_the_id3_version(int version, string expectedFrameId)
     {
-        var v3 = Mp3Fixture.Parse(Edit(Mp3Fixture.Build(3, []), TagField.Year, "1977"));
-        var v4 = Mp3Fixture.Parse(Edit(Mp3Fixture.Build(4, []), TagField.Year, "1977"));
+        // Arrange
+        var source = Mp3Fixture.Build(version, []);
 
-        Assert.Equal("TYER", Assert.Single(v3.Frames).Id);
-        Assert.Equal("TDRC", Assert.Single(v4.Frames).Id);
+        // Act
+        var edited = Edit(source, TagField.Year, "1977");
+
+        // Assert
+        Assert.Equal([expectedFrameId], Mp3Fixture.Parse(edited).FrameIds);
     }
 
     [Fact]
     [Trait("Req", "REQ-088")]
     public void File_without_id3v2_tag_gets_an_id3v23_tag_and_unchanged_audio()
     {
+        // Arrange
         var source = Mp3Fixture.BuildWithoutId3v2();
 
+        // Act
         var edited = Edit(source, TagField.Title, "Title");
 
+        // Assert
         var after = Mp3Fixture.Parse(edited);
         Assert.Equal(3, after.Version);
         Assert.Equal(Mp3Fixture.Parse(source).Audio, after.Audio);
-        Assert.Equal("Title", Read(edited).Values[TagField.Title]);
+        Assert.Equal("Title", ReadValue(edited, TagField.Title));
     }
 
     [Fact]
     [Trait("Req", "REQ-130")]
-    public void Existing_id3v1_is_updated_and_never_added()
+    public void Existing_id3v1_tag_is_updated()
     {
-        var withV1 = Mp3Fixture.Build(4, [Frames.Text("TIT2", "Old")], id3v1: Frames.Id3v1("Old title", "Old artist"));
-        var withoutV1 = Mp3Fixture.Build(4, [Frames.Text("TIT2", "Old")]);
-
-        var editedV1 = Mp3Fixture.Parse(Edit(withV1, new Dictionary<TagField, string?>
+        // Arrange
+        const byte BluesGenre = 0;
+        const byte HouseGenre = 35;
+        var id3v1 = Frames.Id3v1("Old title", "Old artist", genre: BluesGenre);
+        var source = Mp3Fixture.Build(4, [Frames.Text("TIT2", "Old")], id3v1: id3v1);
+        var changes = new Dictionary<TagField, string?>
         {
-            [TagField.Title] = "A title that is much longer than thirty characters",
-            [TagField.Artist] = "坂本",
+            [TagField.Title] = "New title",
+            [TagField.Artist] = "New artist",
             [TagField.Genre] = "house",
-            [TagField.Label] = "Not in ID3v1",
-        })).Id3v1!;
-        var editedNoV1 = Mp3Fixture.Parse(Edit(withoutV1, TagField.Title, "New"));
+        };
 
-        Assert.Equal("A title that is much longer th", System.Text.Encoding.Latin1.GetString(editedV1, 3, 30));
-        Assert.Equal("??", System.Text.Encoding.Latin1.GetString(editedV1, 33, 30).TrimEnd('\0'));
-        Assert.Equal(35, editedV1[127]);
-        Assert.Equal(1, editedV1[126]);
-        Assert.Null(editedNoV1.Id3v1);
+        // Act
+        var edited = Edit(source, changes);
+
+        // Assert
+        var tag = Mp3Fixture.Parse(edited).ParsedId3v1;
+        Assert.Equal("New title", tag.Title);
+        Assert.Equal("New artist", tag.Artist);
+        Assert.Equal(HouseGenre, tag.Genre);
     }
 
     [Fact]
-    public void Comment_without_description_is_preferred()
+    [Trait("Req", "REQ-130")]
+    public void Id3v1_title_is_cut_to_30_characters()
     {
-        var source = Mp3Fixture.Build(4, [Frames.Comment("ID3v1 Comment", "Store"), Frames.Comment("", "Mine")]);
+        // Arrange
+        var source = Mp3Fixture.Build(4, [], id3v1: Frames.Id3v1("Old title", "Old artist"));
 
-        Assert.Equal("Mine", Read(source).Values[TagField.Comment]);
-        var after = Mp3Fixture.Parse(Edit(source, TagField.Comment, "Edited"));
-        Assert.Equal(Frames.Comment("ID3v1 Comment", "Store").Body, after.Frames[0].Body);
+        // Act
+        var edited = Edit(source, TagField.Title, "A title that is much longer than thirty characters");
+
+        // Assert
+        Assert.Equal("A title that is much longer th", Mp3Fixture.Parse(edited).ParsedId3v1.Title);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-130")]
+    public void Characters_that_id3v1_cannot_store_become_question_marks()
+    {
+        // Arrange
+        var source = Mp3Fixture.Build(4, [], id3v1: Frames.Id3v1("Old title", "Old artist"));
+
+        // Act
+        var edited = Edit(source, TagField.Artist, "坂本");
+
+        // Assert
+        Assert.Equal("??", Mp3Fixture.Parse(edited).ParsedId3v1.Artist);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-130")]
+    public void Id3v1_keeps_its_track_number()
+    {
+        // Arrange
+        const byte TrackNumber = 7;
+        var source = Mp3Fixture.Build(4, [], id3v1: Frames.Id3v1("Title", "Artist", track: TrackNumber));
+
+        // Act
+        var edited = Edit(source, TagField.Title, "New title");
+
+        // Assert
+        Assert.Equal(TrackNumber, Mp3Fixture.Parse(edited).ParsedId3v1.Track);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-130")]
+    public void Id3v1_tag_is_never_added()
+    {
+        // Arrange
+        var source = Mp3Fixture.Build(4, [Frames.Text("TIT2", "Old")]);
+
+        // Act
+        var edited = Edit(source, TagField.Title, "New");
+
+        // Assert
+        Assert.Null(Mp3Fixture.Parse(edited).Id3v1);
     }
 
     [Fact]
     [Trait("Req", "REQ-006")]
-    public void Store_comment_is_neither_shown_nor_changed_and_a_plain_comment_is_added()
+    public void Comment_is_the_comment_frame_without_a_description()
+    {
+        // Arrange
+        var source = Mp3Fixture.Build(4,
+        [
+            Frames.Comment(StoreCommentDescription, "Purchased at Beatport"),
+            Frames.Comment("", "Mine"),
+        ]);
+
+        // Act
+        var comment = ReadValue(source, TagField.Comment);
+
+        // Assert
+        Assert.Equal("Mine", comment);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-006")]
+    public void Store_comment_is_not_shown_as_the_comment()
     {
         // Rekordbox and Serato show only the comment without a description (manual tests, ADR-0012).
-        var store = Frames.Comment("ID3v1 Comment", "Purchased at Beatport", encoding: 0);
-        var source = Mp3Fixture.Build(4, [store]);
 
-        Assert.Null(Read(source).Values[TagField.Comment]);
+        // Arrange
+        var source = Mp3Fixture.Build(4, [Frames.Comment(StoreCommentDescription, "Purchased at Beatport")]);
+
+        // Act
+        var comment = ReadValue(source, TagField.Comment);
+
+        // Assert
+        Assert.Null(comment);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-006")]
+    public void Editing_the_comment_changes_only_the_frame_without_a_description()
+    {
+        // Arrange
+        var storeComment = Frames.Comment(StoreCommentDescription, "Purchased at Beatport");
+        var source = Mp3Fixture.Build(4, [storeComment, Frames.Comment("", "Mine")]);
+
+        // Act
         var edited = Edit(source, TagField.Comment, "Edited");
+
+        // Assert
+        Assert.Equal(storeComment.Body, Mp3Fixture.Parse(edited).Frames[0].Body);
+        Assert.Equal("Edited", ReadValue(edited, TagField.Comment));
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-006")]
+    public void Editing_the_comment_of_a_file_with_only_a_store_comment_adds_a_plain_comment()
+    {
+        // Arrange
+        var storeComment = Frames.Comment(StoreCommentDescription, "Purchased at Beatport", TextEncodings.Latin1);
+        var source = Mp3Fixture.Build(4, [storeComment]);
+        var expectedComment = Frames.Comment("", "Edited", TextEncodings.Latin1, terminated: false);
+
+        // Act
+        var edited = Edit(source, TagField.Comment, "Edited");
+
+        // Assert
         var after = Mp3Fixture.Parse(edited);
-        Assert.Equal(store.Body, after.Frames[0].Body);
-        Assert.Equal(Frames.Comment("", "Edited", encoding: 0).Body[..^1], after.Frames[1].Body);
-        Assert.Equal("Edited", Read(edited).Values[TagField.Comment]);
+        Assert.Equal(storeComment.Body, after.Frames[0].Body);
+        Assert.Equal(expectedComment.Body, after.Frames[1].Body);
     }
 
     [Fact]
     [Trait("Req", "REQ-088")]
-    public void Technical_itunes_comments_are_never_used_or_changed()
+    public void Technical_itunes_comment_is_not_shown_as_the_comment()
     {
-        var itunes = Frames.Comment("iTunNORM", " 00000A2B 00000B3C");
-        var source = Mp3Fixture.Build(3, [itunes], id3v1: null);
+        // Arrange
+        var source = Mp3Fixture.Build(3, [Frames.Comment("iTunNORM", " 00000A2B 00000B3C", TextEncodings.Latin1)]);
 
-        Assert.Null(Read(source).Values[TagField.Comment]);
-        var after = Mp3Fixture.Parse(Edit(source, TagField.Comment, "Mine"));
-        Assert.Equal(itunes.Body, after.Frames[0].Body);
+        // Act
+        var comment = ReadValue(source, TagField.Comment);
+
+        // Assert
+        Assert.Null(comment);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-088")]
+    public void Editing_the_comment_leaves_technical_itunes_comments_unchanged()
+    {
+        // Arrange
+        var itunesComment = Frames.Comment("iTunNORM", " 00000A2B 00000B3C", TextEncodings.Latin1);
+        var source = Mp3Fixture.Build(3, [itunesComment]);
+
+        // Act
+        var edited = Edit(source, TagField.Comment, "Mine");
+
+        // Assert
+        var after = Mp3Fixture.Parse(edited);
         Assert.Equal(2, after.Frames.Count);
+        Assert.Equal(itunesComment.Body, after.Frames[0].Body);
     }
 
     [Fact]
     public void Reads_store_values_with_and_without_terminators()
     {
+        // Arrange
         var source = Mp3Fixture.Build(4,
         [
             Frames.Text("TPE1", "Heatwave", terminated: false),
             Frames.Text("TBPM", "128.00"),
-            Frames.Text("TKEY", "Emin", encoding: 0),
+            Frames.Text("TKEY", "Emin", TextEncodings.Latin1),
         ]);
 
+        // Act
         var values = Read(source).Values;
 
+        // Assert
         Assert.Equal("Heatwave", values[TagField.Artist]);
         Assert.Equal("128.00", values[TagField.Bpm]);
         Assert.Equal("Emin", values[TagField.Key]);
@@ -234,55 +419,131 @@ public class Mp3TagWriterTests : Mp3TagTestBase
     [Fact]
     public void Multiple_id3v24_values_are_read_comma_separated()
     {
-        var source = Mp3Fixture.Build(4, [new RawFrame("TPE1", 0, [3, .. "DJ Chus"u8, 0, .. "Harry Romero"u8])]);
+        // Arrange
+        var source = Mp3Fixture.Build(4, [Frames.MultiValueText("TPE1", "DJ Chus", "Harry Romero")]);
 
-        Assert.Equal("DJ Chus, Harry Romero", Read(source).Values[TagField.Artist]);
+        // Act
+        var artist = ReadValue(source, TagField.Artist);
+
+        // Assert
+        Assert.Equal("DJ Chus, Harry Romero", artist);
     }
 
     [Fact]
     [Trait("Req", "REQ-088")]
-    public void Unsynchronised_tag_is_reported_as_not_writable_and_left_untouched()
+    public void Unsynchronised_tag_is_reported_as_not_writable()
     {
-        var source = Mp3Fixture.Build(3, [Frames.Text("TIT2", "Title", encoding: 0)], flags: 0x80);
+        // Arrange
+        const byte UnsynchronisationFlag = 0x80;
+        var source = Mp3Fixture.Build(3, [Frames.Text("TIT2", "Title", TextEncodings.Latin1)], flags: UnsynchronisationFlag);
 
-        Assert.Equal(TagProblem.UnsupportedFeature, Read(source).WriteProblem?.Problem);
-        AssertRefused(source, TagField.Title, TagProblem.UnsupportedFeature);
+        // Act
+        var tags = Read(source);
+
+        // Assert
+        Assert.Equal(TagProblem.UnsupportedFeature, tags.WriteProblem?.Problem);
     }
 
     [Fact]
     [Trait("Req", "REQ-088")]
-    public void Id3v22_is_reported_as_unsupported_version()
+    public void Unsynchronised_tag_is_not_edited()
     {
-        var source = Mp3Fixture.Build(4, [Frames.Text("TIT2", "Title")]);
-        source[3] = 2;
+        // Arrange
+        const byte UnsynchronisationFlag = 0x80;
+        var source = Mp3Fixture.Build(3, [Frames.Text("TIT2", "Title", TextEncodings.Latin1)], flags: UnsynchronisationFlag);
 
-        Assert.Equal(new TagNotWritable(TagProblem.UnsupportedVersion, Version: 2), Read(source).WriteProblem);
-        AssertRefused(source, TagField.Title, TagProblem.UnsupportedVersion);
+        // Act
+        var refusal = EditRefused(source, TagField.Title);
+
+        // Assert
+        Assert.Equal(TagProblem.UnsupportedFeature, refusal.Problem);
     }
 
     [Fact]
     [Trait("Req", "REQ-088")]
-    public void Unrecognised_data_after_the_frames_makes_the_tag_not_writable()
+    public void Id3v22_tag_is_reported_as_unsupported_version()
     {
-        var source = Mp3Fixture.Build(4, [Frames.Text("TIT2", "Title")], padding: 64);
-        var tagEnd = Mp3Fixture.Parse(source).TagSize + 10;
-        source[tagEnd - 10] = 0x42;
+        // Arrange
+        var source = Mp3Fixture.Build(2, []);
 
-        Assert.Equal(TagProblem.Malformed, Read(source).WriteProblem?.Problem);
-        var error = AssertRefused(source, TagField.Title, TagProblem.Malformed);
-        Assert.NotNull(error.Offset);
+        // Act
+        var tags = Read(source);
+
+        // Assert
+        Assert.Equal(new TagNotWritable(TagProblem.UnsupportedVersion, Version: 2), tags.WriteProblem);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-088")]
+    public void Id3v22_tag_is_not_edited()
+    {
+        // Arrange
+        var source = Mp3Fixture.Build(2, []);
+
+        // Act
+        var refusal = EditRefused(source, TagField.Title);
+
+        // Assert
+        Assert.Equal(TagProblem.UnsupportedVersion, refusal.Problem);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-088")]
+    public void Unrecognised_data_in_the_padding_makes_the_tag_not_writable()
+    {
+        // Arrange
+        var source = Mp3Fixture.WithDataInPadding(Mp3Fixture.Build(4, [Frames.Text("TIT2", "Title")], padding: 64));
+
+        // Act
+        var tags = Read(source);
+
+        // Assert
+        Assert.Equal(TagProblem.Malformed, tags.WriteProblem?.Problem);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-088")]
+    public void Unrecognised_data_in_the_padding_is_refused_with_its_position()
+    {
+        // Arrange
+        var source = Mp3Fixture.WithDataInPadding(Mp3Fixture.Build(4, [Frames.Text("TIT2", "Title")], padding: 64));
+
+        // Act
+        var refusal = EditRefused(source, TagField.Title);
+
+        // Assert
+        Assert.Equal(TagProblem.Malformed, refusal.Problem);
+        Assert.NotNull(refusal.Offset);
     }
 
     [Fact]
     [Trait("Req", "REQ-088")]
     public void Compressed_frame_of_an_edited_field_is_refused()
     {
-        var compressed = Frames.Text("TPE1", "Artist") with { Flags = 0x0008 };
+        // Arrange
+        var source = Mp3Fixture.Build(4, [Frames.Compressed(Frames.Text("TPE1", "Artist"))]);
+
+        // Act
+        var refusal = EditRefused(source, TagField.Artist);
+
+        // Assert
+        Assert.Equal(TagProblem.EncodedFrame, refusal.Problem);
+        Assert.Equal("TPE1", refusal.FrameId);
+        Assert.Equal(TagField.Artist, refusal.Field);
+    }
+
+    [Fact]
+    [Trait("Req", "REQ-088")]
+    public void Compressed_frame_of_another_field_is_kept_unchanged()
+    {
+        // Arrange
+        var compressed = Frames.Compressed(Frames.Text("TPE1", "Artist"));
         var source = Mp3Fixture.Build(4, [compressed, Frames.Text("TIT2", "Title")]);
 
-        var error = AssertRefused(source, TagField.Artist, TagProblem.EncodedFrame);
-        Assert.Equal(("TPE1", TagField.Artist), (error.FrameId, error.Field));
+        // Act
         var edited = Edit(source, TagField.Title, "New title");
+
+        // Assert
         Assert.True(compressed.SameBytesAs(Mp3Fixture.Parse(edited).Frames[0]));
     }
 
@@ -290,18 +551,43 @@ public class Mp3TagWriterTests : Mp3TagTestBase
     [Trait("Req", "REQ-088")]
     public void Duplicate_frames_of_an_edited_field_are_refused()
     {
-        var source = Mp3Fixture.Build(3, [Frames.Text("TPE1", "One", encoding: 0), Frames.Text("TPE1", "Two", encoding: 0)]);
+        // Arrange
+        var source = Mp3Fixture.Build(3, [Frames.Text("TPE1", "One", TextEncodings.Latin1), Frames.Text("TPE1", "Two", TextEncodings.Latin1)]);
 
-        var error = AssertRefused(source, TagField.Artist, TagProblem.DuplicateFrame);
-        Assert.Equal(("TPE1", TagField.Artist), (error.FrameId, error.Field));
-        Assert.True(Read(source).CanWrite);
+        // Act
+        var refusal = EditRefused(source, TagField.Artist);
+
+        // Assert
+        Assert.Equal(TagProblem.DuplicateFrame, refusal.Problem);
+        Assert.Equal("TPE1", refusal.FrameId);
+        Assert.Equal(TagField.Artist, refusal.Field);
     }
 
     [Fact]
-    public void Id3v1_genre_list_has_the_80_original_genres()
+    [Trait("Req", "REQ-088")]
+    public void Duplicate_frames_leave_the_other_fields_writable()
     {
-        Assert.Equal(80, CrateEdit.Core.Tags.Id3.Id3v1Tag.Genres.Length);
-        Assert.Equal("House", CrateEdit.Core.Tags.Id3.Id3v1Tag.Genres[35]);
-        Assert.Equal("Hard Rock", CrateEdit.Core.Tags.Id3.Id3v1Tag.Genres[79]);
+        // Arrange
+        var source = Mp3Fixture.Build(3, [Frames.Text("TPE1", "One", TextEncodings.Latin1), Frames.Text("TPE1", "Two", TextEncodings.Latin1)]);
+
+        // Act
+        var tags = Read(source);
+
+        // Assert
+        Assert.True(tags.CanWrite);
+    }
+
+    [Theory]
+    [InlineData(0, "Blues")]
+    [InlineData(35, "House")]
+    [InlineData(79, "Hard Rock")]
+    public void Id3v1_genre_list_has_the_80_original_genres(int number, string expectedName)
+    {
+        // Act
+        var genres = Id3v1Tag.Genres;
+
+        // Assert
+        Assert.Equal(80, genres.Length);
+        Assert.Equal(expectedName, genres[number]);
     }
 }

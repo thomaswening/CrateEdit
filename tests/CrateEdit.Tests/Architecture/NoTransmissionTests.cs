@@ -26,23 +26,33 @@ public class NoTransmissionTests
         typeof(App.App).Assembly.GetName().Name!,
     ];
 
+    private static IEnumerable<string> ReferencedAssemblies(Assembly assembly) =>
+        assembly.GetReferencedAssemblies().Select(a => a.Name!);
+
+    private static IEnumerable<string> ReferencesStartingWith(Assembly assembly, params string[] prefixes) =>
+        ReferencedAssemblies(assembly).Where(name => prefixes.Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal)));
+
     [Theory]
     [MemberData(nameof(ProductAssemblies))]
     public void Product_assemblies_do_not_reference_networking(string assemblyName)
     {
-        var references = Assembly.Load(assemblyName).GetReferencedAssemblies().Select(a => a.Name!);
+        // Arrange
+        var assembly = Assembly.Load(assemblyName);
 
-        Assert.DoesNotContain(references,
-            name => ForbiddenPrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal)));
+        // Act
+        var networking = ReferencesStartingWith(assembly, ForbiddenPrefixes);
+
+        // Assert
+        Assert.Empty(networking);
     }
 
     [Fact]
     public void Logging_uses_only_the_local_file_sink()
     {
-        var sinks = typeof(AppInfo).Assembly.GetReferencedAssemblies()
-            .Select(a => a.Name!)
-            .Where(name => name.StartsWith("Serilog.Sinks.", StringComparison.Ordinal));
+        // Act
+        var sinks = ReferencesStartingWith(typeof(AppInfo).Assembly, "Serilog.Sinks.");
 
+        // Assert
         Assert.Equal(["Serilog.Sinks.File"], sinks);
     }
 }

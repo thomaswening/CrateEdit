@@ -74,6 +74,17 @@ Key guardrails and how they are enforced:
 - **No silent overwrite** ([REQ-074](requirements.md#req-074)): tests that change a file externally between staging and apply and assert it is skipped or flagged.
 - **No automatic transmission** ([REQ-117](requirements.md#req-117)): architecture test that the app has no network-capable dependency in the diagnostics path.
 
+### Writing tests
+A test should be readable in one pass, top to bottom, by someone who does not know the code under test. A failing test is often the first thing a contributor reads about a feature.
+
+- **Arrange, Act, Assert.** Every test has these three parts, marked with `// Arrange`, `// Act` and `// Assert` comments. A test with nothing to arrange starts at `// Act`. When the action is the assertion, as with `Assert.Throws`, the part is `// Act and assert`.
+- **One behaviour, one act.** A test checks one thing the code does and calls the code under test once. A test that checks both reading and writing, or the success and the failure case, is split in two. Its name says which behaviour: `Clearing_a_field_removes_its_frame`.
+- **No logic in the test body.** No loops, conditionals, ternaries or LINQ chains in tests. Anything that needs them goes into a helper with a name that says what it checks, such as `AssertOnlyEdited(before, after, "COMM")` or `after.Frame("TPE1")`. Helpers live in the fixture classes and test base classes, not in the tests.
+- **One idea per line.** A line that builds a value, calls the code and compares the result does too much. Give intermediate values a name.
+- **Name the values that matter.** A value the reader needs to understand gets a name, such as `const int TitleLength = 30;` or `var storeComment = Frames.Comment(...)`. A literal is fine when it is the point of the test, like `"Röyksopp"` in an encoding test.
+- **Fixtures say what, not how.** Builders describe the input in domain terms (`Mp3Fixture.Build(4, Frames.DjSoftwareData())`, `WavFixture.WithInfo(...)`); the byte layout is hidden in the fixture.
+- **Theory data reads as a table.** One case per `[InlineData]` line, with values a reader can check without running the test.
+
 ### Test fixtures
 Real DJ-software-tagged files contain copyrighted audio and must not be committed. Fixtures in the repository are generated: short synthetic audio (silence or a tone) carrying tag frames copied from real files (Serato GEOB, Rekordbox/Traktor data), so the frames being protected are real while the audio is not. Original sample files stay outside the repository.
 
