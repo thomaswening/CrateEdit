@@ -11,40 +11,42 @@ internal sealed record RawFrame(string Id, ushort Flags, byte[] Body)
     /// <summary>The text encoding of a text or comment frame: its first body byte.</summary>
     public byte TextEncoding => Body[0];
 
-    /// <summary>
-    /// A comment frame whose description is empty: after the encoding byte and the 3-byte language
-    /// comes the terminator right away (for UTF-16, optionally preceded by a byte-order mark).
-    /// </summary>
-    public bool IsCommentWithoutDescription
-    {
-        get
-        {
-            if (Id != "COMM")
-            {
-                return false;
-            }
-
-            var afterLanguage = Body.AsSpan(4);
-            return TextEncoding is TextEncodings.Utf16 or TextEncodings.Utf16BigEndian
-                ? afterLanguage.StartsWith((ReadOnlySpan<byte>)[0, 0]) || afterLanguage[2..].StartsWith((ReadOnlySpan<byte>)[0, 0])
-                : afterLanguage.StartsWith((ReadOnlySpan<byte>)[0]);
-        }
-    }
+    /// <summary>A comment frame with an empty description, as DJ software shows it as "Comment".</summary>
+    public bool IsCommentWithoutDescription => Id == "COMM" && DescriptionIsEmpty();
 
     /// <summary>The value of a text frame, decoded, without terminator or byte-order mark.</summary>
-    public string Text
+    public string Text => DecodeText();
+
+    private bool IsUtf16 => TextEncoding is TextEncodings.Utf16 or TextEncodings.Utf16BigEndian;
+
+    /// <summary>
+    /// A comment body is the encoding byte, a 3-byte language, the description and its terminator,
+    /// then the value. The description is empty if the terminator follows the language right away
+    /// (for UTF-16, optionally after a 2-byte byte-order mark).
+    /// </summary>
+    private bool DescriptionIsEmpty()
     {
-        get
+        const int LanguageEnd = 4;
+        const int ByteOrderMarkLength = 2;
+        ReadOnlySpan<byte> terminator = IsUtf16 ? [0, 0] : [0];
+
+        var afterLanguage = Body.AsSpan(LanguageEnd);
+        var afterByteOrderMark = IsUtf16 ? afterLanguage[ByteOrderMarkLength..] : afterLanguage;
+        return afterLanguage.StartsWith(terminator) || afterByteOrderMark.StartsWith(terminator);
+    }
+
+    private string DecodeText()
+    {
+        const char ByteOrderMark = '\uFEFF';
+        var encoding = TextEncoding switch
         {
-            var encoding = TextEncoding switch
-            {
-                TextEncodings.Latin1 => Encoding.Latin1,
-                TextEncodings.Utf16 => Encoding.Unicode,
-                TextEncodings.Utf16BigEndian => Encoding.BigEndianUnicode,
-                _ => Encoding.UTF8,
-            };
-            return encoding.GetString(Body, 1, Body.Length - 1).TrimStart('﻿').TrimEnd('\0');
-        }
+            TextEncodings.Latin1 => Encoding.Latin1,
+            TextEncodings.Utf16 => Encoding.Unicode,
+            TextEncodings.Utf16BigEndian => Encoding.BigEndianUnicode,
+            _ => Encoding.UTF8,
+        };
+        var textAfterEncodingByte = encoding.GetString(Body, 1, Body.Length - 1);
+        return textAfterEncodingByte.TrimStart(ByteOrderMark).TrimEnd('\0');
     }
 
     public override string ToString() => $"{Id} ({Body.Length} bytes)";
