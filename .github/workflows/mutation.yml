@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     # Surviving mutants point reviewers to tests to doubt; they never block a pull request.
     continue-on-error: true
-    timeout-minutes: 60
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
