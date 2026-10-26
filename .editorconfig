@@ -396,8 +396,3 @@ dotnet_diagnostic.SYSLIB1045.severity = warning
 dotnet_diagnostic.CA1065.severity = warning
 # No ignored results (coding guideline: results are return values).
 dotnet_diagnostic.CA1806.severity = warning
-
-# The two tool scripts still hold 12 constant patterns as new Regex or Regex.Match. Until they are
-# converted, SYSLIB1045 stays a suggestion there so that CI can run them.
-[tools/*.cs]
-dotnet_diagnostic.SYSLIB1045.severity = suggestion

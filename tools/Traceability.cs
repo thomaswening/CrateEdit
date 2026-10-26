@@ -101,7 +101,7 @@ static string Single(Dictionary<string, List<string>> options, string name) =>
 
 static List<Requirement> ReadRequirements(string path) =>
     File.ReadLines(path)
-        .Select(line => Regex.Match(line, @"^(?:<a id=""[^""]+""></a>)?\*\*(REQ-\d{3}) — (.+?) \(([^)]+)\)\.\*\*"))
+        .Select(line => Patterns.RequirementDefinition().Match(line))
         .Where(match => match.Success)
         .Select(match => new Requirement(match.Groups[1].Value, match.Groups[2].Value, match.Groups[3].Value))
         .OrderBy(r => r.Id, StringComparer.Ordinal)
@@ -109,7 +109,7 @@ static List<Requirement> ReadRequirements(string path) =>
 
 static HashSet<string> ReadManualChecks(string path) =>
     File.ReadLines(path)
-        .Select(line => Regex.Match(line, @"^\|\s*\[?(REQ-\d{3})\b"))
+        .Select(line => Patterns.ManualCheckRow().Match(line))
         .Where(match => match.Success)
         .Select(match => match.Groups[1].Value)
         .ToHashSet();
@@ -134,3 +134,15 @@ static string ShortName(string fullName)
 internal sealed record Requirement(string Id, string Title, string Level);
 
 internal sealed record TestResult(string Name, string Result, HashSet<string> Requirements);
+
+// The constant patterns, as [GeneratedRegex] methods so that the build checks them.
+internal static partial class Patterns
+{
+    // The defining line of a requirement: its ID, title and level.
+    [GeneratedRegex(@"^(?:<a id=""[^""]+""></a>)?\*\*(REQ-\d{3}) — (.+?) \(([^)]+)\)\.\*\*")]
+    public static partial Regex RequirementDefinition();
+
+    // A table row in docs/manual-verification.md that starts with a requirement ID.
+    [GeneratedRegex(@"^\|\s*\[?(REQ-\d{3})\b")]
+    public static partial Regex ManualCheckRow();
+}

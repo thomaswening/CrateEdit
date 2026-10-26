@@ -145,7 +145,6 @@ Three .NET analysers are raised to warnings in [`.editorconfig`](../.editorconfi
 The message names the file, line and analyser, e.g. `FileAccessError.cs(44,14): error CA1065: get_Code creates an exception of type ArgumentOutOfRangeException`. Change the code as in the "Accepted" column. Where the rule does not fit, suppress that one member with `[SuppressMessage(..., Justification = "...")]` and say why. Never turn the analyser off for a file: that hides the next hit too. Current exemptions:
 
 - `Result` and `Result<T>`: the implicit operators from `Error` throw on null, because turning a null error into a success would hide the bug.
-- `tools/*.cs`: SYSLIB1045 is a suggestion until the 12 constant patterns in the two tool scripts are converted.
 
 Run locally with `dotnet build -c Release`.
 
