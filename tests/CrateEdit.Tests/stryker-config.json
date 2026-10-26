@@ -1,6 +1,7 @@
 {
   "stryker-config": {
     "project": "CrateEdit.Core.csproj",
+    "test-runner": "mtp",
     "mutate": [
       "**/Tags/**/*.cs"
     ],
