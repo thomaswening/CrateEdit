@@ -96,24 +96,91 @@ CRATEEDIT_SAMPLES=/path/to/sample/mp3s dotnet test -c Release --filter "FullyQua
 Set `CRATEEDIT_WRITE_DIR` as well to run the safe-write tests on specific storage, e.g. a folder on a USB stick or on the Google Drive mount. The tests create and remove their own subfolder there.
 
 ### Requirements traceability
-- CI produces a traceability report listing every requirement, the tests tagged with it, and a status: **Passing**, **Failing**, **Manual** or **Not covered**. It appears in each CI job's summary and in the `test-results-<os>` artifact.
+- CI produces a traceability report listing every requirement, the tests tagged with it, and a status such as **Passing**, **Manual** or **Not covered**. It appears in each CI job's summary and in the `test-results-<os>` artifact.
 - The report and a unit test both fail on tags that name a requirement that does not exist.
-- To produce the report locally:
-  ```bash
-  dotnet build -c Release
-  dotnet tests/CrateEdit.Tests/bin/Release/net10.0/CrateEdit.Tests.dll -xml TestResults/results.xml
-  dotnet run tools/Traceability.cs -- --requirements docs/requirements.md --manual docs/manual-verification.md --results TestResults/results.xml --output TestResults/traceability.md
-  ```
 - Requirements that cannot be automated (e.g. "Rekordbox reads the written key", performance on the minimum configuration) are listed in `docs/manual-verification.md` with steps, and checked manually.
-- **Phase exit check:** a phase is complete only when every requirement assigned to it in the roadmap is either covered by passing tests or listed and checked in the manual verification list, and the phase's open decisions are recorded in the requirements.
+- **Phase exit check:** a phase is complete only when every requirement assigned to it in the roadmap is either covered by passing tests or listed and checked in the manual verification list, and the open decisions it resolves or needs are resolved. CI checks this for every phase up to the last completed one.
+
+[Traceability report and phase exit check](tools/traceability.md) has the rules, what to do when the check fails and how to run it locally.
 
 ## Continuous integration
-GitHub Actions on every PR and on `main`:
-- build and all test layers on Windows and macOS,
-- PR title check (conventional commit),
-- traceability report in the job summary and as a build artifact.
+GitHub Actions run on every pull request and on every push to `main`. Jobs marked "blocks" must be green before a pull request is merged. Informational jobs never turn red.
+
+```mermaid
+flowchart LR
+  pr["pull request<br/>or push to main"] --> ci["ci.yml"]
+  pr --> title["pr-title.yml<br/>conventional commit title"]
+  pr -- "Tags or tests changed" --> mutation["mutation.yml<br/>Stryker.NET report"]
+  ci --> build["Build and test<br/>Windows, macOS"]
+  ci --> format["Formatting"]
+  ci --> coverage["Coverage report"]
+  build --> traceability["traceability and<br/>phase exit check"]
+  weekly["weekly"] --> dependabot["Dependabot<br/>update pull requests"]
+```
+
+| Workflow, job | Checks | Blocks |
+|---|---|---|
+| `ci.yml`, Build and test | build with analysers, requirement links, all tests, [traceability and phase exit check](tools/traceability.md) | yes |
+| `ci.yml`, Formatting | [code matches `.editorconfig`](#analysers-and-formatting) | yes |
+| `ci.yml`, Coverage report | [which lines the tests run](#coverage-report) | no |
+| `mutation.yml` | [which changes to the tag code no test notices](#mutation-report) | no |
+| `pr-title.yml` | the pull request title is a conventional commit | yes |
 
 On `main`, the release-please workflow maintains the release PR. Building unsigned Windows and macOS packages and attaching them to the GitHub release is added before the first release (Milestone 2).
+
+### Analysers and formatting
+**Rule 1: the build has no analyser finding.** `Directory.Build.props` turns on the recommended .NET code analysers (`AnalysisLevel` `latest-recommended`) and the code style of `.editorconfig` (`EnforceCodeStyleInBuild`). With `TreatWarningsAsErrors`, every finding fails the build, locally as in CI. The analysers catch bugs a reviewer easily misses, such as an ignored return value or a culture-dependent `int.Parse`. The coding guideline raises three rules to warnings: `SYSLIB1045` (a constant pattern is a `[GeneratedRegex]` method), `CA1065` (no exceptions from property getters) and `CA1806` (no ignored results). The tools in `tools/` get the same analysers when `dotnet run` builds them.
+
+| Case | Reported | Accepted |
+|---|---|---|
+| Ignored result of a native call | `RmEndSession(session);` (CA1806) | `_ = RmEndSession(session);` with a comment why |
+| Culture-dependent parsing | `int.Parse(text)` (CA1305) | `int.Parse(text, CultureInfo.InvariantCulture)` |
+| Regular expression built at run time from a constant | `new Regex(@"^REQ-\d{3}$")` (SYSLIB1045) | a `[GeneratedRegex]` method |
+| Test name with underscores | — | `Clearing_a_field_removes_its_frame` (CA1707 is off in `tests/`) |
+| A type named `Error` | — | `Error` (CA1716 is off: CrateEdit is not a library for Visual Basic) |
+
+When the build fails, the message names the file, line and rule, e.g. `Result.cs(23,73): error CA1065: …`. The rule ID links Microsoft's description with the usual fix. Fix the code where you can. Where a finding is wrong for one place, suppress it there with `[SuppressMessage("Category", "CAnnnn", Justification = "…")]` and say why. A rule that is wrong for the whole project is switched off in `.editorconfig`, in the "Analysers" section, with its reason on the line above. Such a change is reviewed like code.
+
+**Rule 2: the code matches `.editorconfig`.** The Formatting job runs `dotnet format --verify-no-changes`, which fails on any difference in whitespace, `using` order or code style. A reviewer then never has to comment on layout.
+
+| Case | Reported | Accepted |
+|---|---|---|
+| Missing newline at the end of a file | `error FINALNEWLINE: Fix final newline` | the file ends with a newline |
+| `using` directives not sorted | `error IMPORTS: Fix imports ordering.` | `System` first, then alphabetically. The code puts no blank line between groups, though the check allows one. |
+
+To fix it, run `dotnet format CrateEdit.slnx` and commit the result. Check before pushing with:
+
+```bash
+dotnet format CrateEdit.slnx --verify-no-changes
+```
+
+The check covers the solution's projects, not the scripts in `tools/`.
+
+### Coverage report
+The Coverage job runs all tests on Linux under [dotnet-coverage](https://learn.microsoft.com/dotnet/core/additional-tools/dotnet-coverage) and turns the result into a report with [ReportGenerator](https://reportgenerator.io). Line and branch coverage of `CrateEdit.Core` and `CrateEdit.App` appear in the job summary. The full HTML report, with every line marked as run or not, is in the `coverage-report` artifact. It is informational: a coverage number says which code no test runs, not whether the tests check anything. On 26 October 2026, line coverage was 90.7 % and branch coverage 86.3 %.
+
+```bash
+dotnet tool restore
+dotnet build -c Release
+dotnet dotnet-coverage collect -f cobertura -o TestResults/coverage.cobertura.xml "dotnet tests/CrateEdit.Tests/bin/Release/net10.0/CrateEdit.Tests.dll"
+dotnet reportgenerator -reports:TestResults/coverage.cobertura.xml -targetdir:TestResults/coverage "-reporttypes:Html" "-assemblyfilters:+CrateEdit.Core;+CrateEdit.App"
+```
+
+### Mutation report
+Mutation testing checks whether the tests would notice a bug. [Stryker.NET](https://stryker-mutator.io/docs/stryker-net/introduction/) makes one small change at a time to the code under test, a **mutant**: for example `<` becomes `<=`, or a condition becomes `true`. It runs the tests against each mutant. A mutant that makes a test fail is **killed**. One that every test survives shows code whose behaviour no test checks. In [#21](https://github.com/thomaswening/CrateEdit/pull/21) such a check found the iTunes comment tests passing without testing anything.
+
+The `mutation.yml` workflow mutates `src/CrateEdit.Core/Tags`, where a wrong test costs most, on every pull request that changes that code or the tests, on `main`, and by hand ("Run workflow"). Settings are in `tests/CrateEdit.Tests/stryker-config.json`. The job summary shows the mutation score per file, the share of mutants killed. The `mutation-report` artifact holds an HTML report that shows each surviving mutant in its line. It is informational. In a review, look at the survivors in the code the pull request changes: each is either a missing assertion or code that does nothing observable.
+
+It takes several minutes. To run it locally:
+
+```bash
+dotnet tool restore
+cd tests/CrateEdit.Tests
+dotnet dotnet-stryker
+```
+
+### Dependency updates
+Dependabot (`.github/dependabot.yml`) opens update pull requests once a week: NuGet packages in `Directory.Packages.props`, the .NET tools in `dotnet-tools.json`, and the actions in `.github/workflows`. Minor and patch updates come together in one pull request per ecosystem. Each major update gets its own. Titles are conventional commits (`build(deps): …`, `ci(deps): …`), so they pass the title check and stay out of the changelog. Review them like any pull request: CI must be green, and a major update needs a look at its release notes.
 
 ## Releases and distribution
 - Releases are published on GitHub Releases, unsigned. Windows SmartScreen and macOS Gatekeeper will warn on first launch; the release notes explain how to open the app anyway.

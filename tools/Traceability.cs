@@ -6,7 +6,7 @@
 // With --phase N, also fails unless phases 0 to N of docs/roadmap.md are complete.
 //
 // What each check means and what to do when it fails:
-// https://github.com/thomaswening/CrateEdit/blob/main/docs/development.md#traceability-and-phase-exit-check
+// https://github.com/thomaswening/CrateEdit/blob/main/docs/tools/traceability.md
 //
 // Usage:
 //   dotnet run tools/Traceability.cs -- --requirements docs/requirements.md
