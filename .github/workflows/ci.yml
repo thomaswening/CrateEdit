@@ -1,3 +1,6 @@
+# Build, tests, traceability and phase exit check, formatting and a coverage report.
+# What each job checks and what to do when it fails:
+# https://github.com/thomaswening/CrateEdit/blob/main/docs/development.md#continuous-integration
 name: CI
 
 on:
@@ -7,6 +10,10 @@ on:
 
 permissions:
   contents: read
+
+env:
+  # The last phase of the roadmap that is complete. Raise it in the pull request that completes a phase.
+  LAST_COMPLETED_PHASE: 1
 
 jobs:
   build-and-test:
@@ -28,7 +35,7 @@ jobs:
       # The native xUnit runner writes an XML report that includes the requirement tags.
       - name: Test
         run: dotnet tests/CrateEdit.Tests/bin/Release/net10.0/CrateEdit.Tests.dll -xml TestResults/results.xml
-      - name: Requirements traceability
+      - name: Requirements traceability and phase exit check
         if: ${{ !cancelled() }}
         shell: bash
         run: |
@@ -37,6 +44,8 @@ jobs:
             --requirements docs/requirements.md \
             --manual docs/manual-verification.md \
             --results TestResults/results.xml \
+            --roadmap docs/roadmap.md \
+            --phase "$LAST_COMPLETED_PHASE" \
             --output TestResults/traceability.md > /dev/null || status=$?
           cat TestResults/traceability.md >> "$GITHUB_STEP_SUMMARY"
           exit $status
@@ -46,3 +55,44 @@ jobs:
         with:
           name: test-results-${{ matrix.os }}
           path: TestResults
+
+  format:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Code matches .editorconfig
+        run: dotnet format CrateEdit.slnx --verify-no-changes
+
+  coverage:
+    name: Coverage report (informational)
+    runs-on: ubuntu-latest
+    # The report informs reviews; a drop in coverage never blocks a pull request.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Restore tools
+        run: dotnet tool restore
+      - name: Build
+        run: dotnet build -c Release
+      - name: Test with coverage
+        run: >
+          dotnet dotnet-coverage collect -f cobertura -o TestResults/coverage.cobertura.xml
+          "dotnet tests/CrateEdit.Tests/bin/Release/net10.0/CrateEdit.Tests.dll"
+      - name: Report
+        shell: bash
+        run: |
+          dotnet reportgenerator -reports:TestResults/coverage.cobertura.xml -targetdir:TestResults/coverage \
+            "-reporttypes:Html;MarkdownSummaryGithub" "-assemblyfilters:+CrateEdit.Core;+CrateEdit.App"
+          cat TestResults/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: TestResults/coverage
