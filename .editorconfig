@@ -29,13 +29,13 @@ indent_size = 4
 tab_width = 4
 
 # New line preferences
-insert_final_newline = false
+insert_final_newline = true
 
 #### .NET Coding Conventions ####
 [*.{cs,vb}]
 
 # Organize usings
-dotnet_separate_import_directive_groups = true
+dotnet_separate_import_directive_groups = false
 dotnet_sort_system_directives_first = true
 file_header_template = unset
 
@@ -387,3 +387,28 @@ dotnet_naming_style.s_camelcase.required_suffix =
 dotnet_naming_style.s_camelcase.word_separator = 
 dotnet_naming_style.s_camelcase.capitalization = camel_case
 
+#### Analysers ####
+# Directory.Build.props turns on the recommended .NET analysers. Rules raised or switched off here
+# say why. See docs/development.md, "Analysers and formatting".
+[*.cs]
+
+# Raised to warnings by the coding guideline (C# rules, "Automated checks").
+# Constant patterns as [GeneratedRegex] methods.
+dotnet_diagnostic.SYSLIB1045.severity = warning
+# No exceptions from property getters.
+dotnet_diagnostic.CA1065.severity = warning
+# No ignored results.
+dotnet_diagnostic.CA1806.severity = warning
+
+# Off: CrateEdit is an application, not a library called from Visual Basic, so a type named Error
+# conflicts with nothing.
+dotnet_diagnostic.CA1716.severity = none
+# Off: error messages come from localised resources, so their format differs per UI language and
+# one cached CompositeFormat would fix the language.
+dotnet_diagnostic.CA1863.severity = none
+
+[tests/**.cs]
+# Off: test names are sentences with underscores, e.g. Clearing_a_field_removes_its_frame.
+dotnet_diagnostic.CA1707.severity = none
+# Off: test classes never have finalizers; xUnit disposes them.
+dotnet_diagnostic.CA1816.severity = none

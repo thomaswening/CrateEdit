@@ -44,6 +44,6 @@ public sealed record TagNotWritable(TagProblem Problem, string? FrameId = null, 
         TagProblem.Malformed => ErrorCodes.TagsMalformed,
         TagProblem.EncodedFrame => ErrorCodes.TagsEncodedFrame,
         TagProblem.DuplicateFrame => ErrorCodes.TagsDuplicateFrame,
-        _ => throw new ArgumentOutOfRangeException(nameof(Problem)),
+        _ => throw new InvalidOperationException($"No error code for {Problem}."),
     };
 }

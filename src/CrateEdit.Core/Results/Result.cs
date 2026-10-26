@@ -20,6 +20,7 @@ public sealed class Result
 
     public bool IsSuccess => !IsFailure;
 
+    [SuppressMessage("Design", "CA1065", Justification = "A null error is a bug; failing loudly beats a silent success (ADR-0009).")]
     public static implicit operator Result(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
 
     public override string ToString() => IsSuccess ? "Success" : $"Failure: {Error}";
@@ -57,6 +58,7 @@ public sealed class Result<T>
 
     public static implicit operator Result<T>(T value) => new(value, null);
 
+    [SuppressMessage("Design", "CA1065", Justification = "A null error is a bug; failing loudly beats a silent success (ADR-0009).")]
     public static implicit operator Result<T>(Error error) => new(default, error ?? throw new ArgumentNullException(nameof(error)));
 
     public TOut Match<TOut>(Func<T, TOut> onSuccess, Func<Error, TOut> onFailure) =>

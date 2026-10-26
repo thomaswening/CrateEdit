@@ -35,7 +35,7 @@ var root = FindRepositoryRoot();
 var requirementsPath = Path.Combine(root, "docs", "requirements.md");
 var adrDirectory = Path.Combine(root, "docs", "adr");
 
-var definition = new Regex(@"^(?<anchor><a id=""(?<anchorId>[a-z0-9-]+)""></a>)?\*\*(?<id>REQ-\d{3}|OPEN-[A-Z]) — ");
+var definition = Patterns.Definition();
 var requirements = File.ReadLines(requirementsPath)
     .Select(line => definition.Match(line))
     .Where(match => match.Success)
@@ -43,19 +43,19 @@ var requirements = File.ReadLines(requirementsPath)
     .ToHashSet();
 var adrs = Directory.EnumerateFiles(adrDirectory, "*.md")
     .Select(Path.GetFileName)
-    .Select(name => Regex.Match(name!, @"^(?<number>\d{4})-.+\.md$"))
+    .Select(name => Patterns.AdrFileName().Match(name!))
     .Where(match => match.Success)
     .ToDictionary(match => "ADR-" + match.Groups["number"].Value, match => match.Value);
 
-const string Mention = @"\b(?<mention>REQ-\d{3}|OPEN-[A-Z]|ADR-\d{4})\b";
-var markdownToken = new Regex(@"(?<code>`[^`]*`)|(?<link>\[[^\]]*\]\((?<target>[^)]*)\))|" + Mention);
-var xmlDocToken = new Regex(@"(?<code><c>.*?</c>)|(?<link><see\b[^>]*?(?:/>|>.*?</see>))|(?<code>`[^`]*`)|" + Mention);
-var requirementTarget = new Regex(@"requirements\.md#(?<anchor>[a-z0-9-]+)(?:""|$)|^#(?<anchor>[a-z0-9-]+)$");
-var adrTarget = new Regex(@"adr/(?<file>\d{4}-[^/""#)]+\.md)|^(?<file>\d{4}-[^/""#)]+\.md)$");
+var markdownToken = Patterns.MarkdownToken();
+var xmlDocToken = Patterns.XmlDocToken();
+var requirementTarget = Patterns.RequirementTarget();
+var adrTarget = Patterns.AdrTarget();
 
-var repositoryUrl = new Regex(@"https://github\.com/thomaswening/CrateEdit/blob/main/(?<path>[^\s""#)<>]+?)(?:#(?<anchor>[\w-]+))?(?=[\s""<>)]|$|\.(?:\s|$))");
-var bareDocPath = new Regex(@"(?<![\w/.\-])docs/[\w./-]+\.md(?:#[\w-]+)?");
+var repositoryUrl = Patterns.RepositoryUrl();
+var bareDocPath = Patterns.BareDocPath();
 
+string[] codeFolders = ["src", "tests"];
 var problems = new List<string>();
 
 var markdownFiles = Directory.EnumerateFiles(Path.Combine(root, "docs"), "*.md", SearchOption.AllDirectories)
@@ -66,7 +66,7 @@ foreach (var file in markdownFiles.Order(StringComparer.Ordinal))
     ProcessFile(file, isMarkdown: true);
 }
 
-var codeFiles = new[] { "src", "tests" }
+var codeFiles = codeFolders
     .SelectMany(folder => Directory.EnumerateFiles(Path.Combine(root, folder), "*.cs", SearchOption.AllDirectories))
     .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") &&
                    !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"));
@@ -228,7 +228,7 @@ void CheckLink(string file, int lineIndex, string link, string target, bool isRe
     {
         var id = requirement.Groups["anchor"].Value.ToUpperInvariant();
         var isOwnAnchor = target.StartsWith('#');
-        if (Regex.IsMatch(id, @"^(REQ-\d{3}|OPEN-[A-Z])$") && (!isOwnAnchor || isRequirements) && !requirements.Contains(id))
+        if (Patterns.RequirementOrDecisionId().IsMatch(id) && (!isOwnAnchor || isRequirements) && !requirements.Contains(id))
         {
             problems.Add($"{Describe(file, lineIndex)}: link to unknown {id}");
         }
@@ -278,7 +278,7 @@ void ProcessCodeCommentLinks(string file)
             else if (target == "docs/requirements.md" && url.Groups["anchor"].Success)
             {
                 var id = url.Groups["anchor"].Value.ToUpperInvariant();
-                if (Regex.IsMatch(id, @"^(REQ-\d{3}|OPEN-[A-Z])$") && !requirements.Contains(id))
+                if (Patterns.RequirementOrDecisionId().IsMatch(id) && !requirements.Contains(id))
                 {
                     problems.Add($"{Describe(file, i)}: link to unknown {id}");
                 }
@@ -319,4 +319,41 @@ static string FindRepositoryRoot()
     }
 
     throw new InvalidOperationException("Run this tool inside the CrateEdit repository.");
+}
+
+internal static partial class Patterns
+{
+    private const string Mention = @"\b(?<mention>REQ-\d{3}|OPEN-[A-Z]|ADR-\d{4})\b";
+
+    /// <summary>The start of a requirement or decision definition, with its anchor if it has one.</summary>
+    [GeneratedRegex(@"^(?<anchor><a id=""(?<anchorId>[a-z0-9-]+)""></a>)?\*\*(?<id>REQ-\d{3}|OPEN-[A-Z]) — ")]
+    public static partial Regex Definition();
+
+    /// <summary>An ADR's file name, e.g. "0010-safe-write-technique.md".</summary>
+    [GeneratedRegex(@"^(?<number>\d{4})-.+\.md$")]
+    public static partial Regex AdrFileName();
+
+    /// <summary>Inline code, a link or a mention in Markdown.</summary>
+    [GeneratedRegex(@"(?<code>`[^`]*`)|(?<link>\[[^\]]*\]\((?<target>[^)]*)\))|" + Mention)]
+    public static partial Regex MarkdownToken();
+
+    /// <summary>Inline code, a link or a mention in an XML documentation comment.</summary>
+    [GeneratedRegex(@"(?<code><c>.*?</c>)|(?<link><see\b[^>]*?(?:/>|>.*?</see>))|(?<code>`[^`]*`)|" + Mention)]
+    public static partial Regex XmlDocToken();
+
+    [GeneratedRegex(@"requirements\.md#(?<anchor>[a-z0-9-]+)(?:""|$)|^#(?<anchor>[a-z0-9-]+)$")]
+    public static partial Regex RequirementTarget();
+
+    [GeneratedRegex(@"adr/(?<file>\d{4}-[^/""#)]+\.md)|^(?<file>\d{4}-[^/""#)]+\.md)$")]
+    public static partial Regex AdrTarget();
+
+    [GeneratedRegex(@"https://github\.com/thomaswening/CrateEdit/blob/main/(?<path>[^\s""#)<>]+?)(?:#(?<anchor>[\w-]+))?(?=[\s""<>)]|$|\.(?:\s|$))")]
+    public static partial Regex RepositoryUrl();
+
+    /// <summary>A path to a document written out instead of linked, e.g. "docs/formats/id3.md".</summary>
+    [GeneratedRegex(@"(?<![\w/.\-])docs/[\w./-]+\.md(?:#[\w-]+)?")]
+    public static partial Regex BareDocPath();
+
+    [GeneratedRegex(@"^(REQ-\d{3}|OPEN-[A-Z])$")]
+    public static partial Regex RequirementOrDecisionId();
 }

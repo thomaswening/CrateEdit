@@ -16,6 +16,7 @@
 // Test results are xUnit XML reports (test assembly run with -xml). With several result files
 // (e.g. one per OS), a requirement only counts as passing if its tests pass in all of them.
 
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -36,7 +37,7 @@ var unknown = tests.SelectMany(t => t.Requirements).Distinct()
 var report = new StringBuilder();
 report.AppendLine("# Requirements traceability");
 report.AppendLine();
-report.AppendLine($"Results from: {string.Join(", ", resultFiles.Select(Path.GetFileName))}");
+report.AppendLine(CultureInfo.InvariantCulture, $"Results from: {string.Join(", ", resultFiles.Select(Path.GetFileName))}");
 report.AppendLine();
 
 var rows = requirements.Select(requirement =>
@@ -62,7 +63,7 @@ report.AppendLine("| Status | Count |");
 report.AppendLine("|---|---|");
 foreach (var group in rows.GroupBy(r => r.Status).OrderBy(g => g.Key))
 {
-    report.AppendLine($"| {Label(group.Key)} | {group.Count()} |");
+    report.AppendLine(CultureInfo.InvariantCulture, $"| {Label(group.Key)} | {group.Count()} |");
 }
 
 report.AppendLine();
@@ -71,19 +72,19 @@ report.AppendLine("|---|---|---|---|");
 foreach (var (requirement, status, names) in rows)
 {
     var testList = string.Join("<br>", names);
-    report.AppendLine($"| {requirement.Id} {requirement.Title} | {requirement.Level} | {Label(status)} | {testList} |");
+    report.AppendLine(CultureInfo.InvariantCulture, $"| {requirement.Id} {requirement.Title} | {requirement.Level} | {Label(status)} | {testList} |");
 }
 
 if (unknown.Count > 0)
 {
     report.AppendLine();
-    report.AppendLine($"**Error:** tests reference unknown requirements: {string.Join(", ", unknown)}");
+    report.AppendLine(CultureInfo.InvariantCulture, $"**Error:** tests reference unknown requirements: {string.Join(", ", unknown)}");
 }
 
 var phaseExitFailed = false;
 if (options.ContainsKey("--phase"))
 {
-    var lastPhase = int.Parse(Single(options, "--phase"));
+    var lastPhase = int.Parse(Single(options, "--phase"), CultureInfo.InvariantCulture);
     var phases = ReadPhases(Single(options, "--roadmap"), requirements);
     var resolved = ReadResolvedDecisions(requirementsPath);
     var problems = PhaseExitProblems(phases, lastPhase, rows, resolved);
@@ -157,9 +158,9 @@ static List<Phase> ReadPhases(string roadmapPath, List<Requirement> requirements
     {
         if (Patterns.PhaseHeading().Match(line) is { Success: true } heading)
         {
-            phases.Add(new Phase(int.Parse(heading.Groups[1].Value), [], []));
+            phases.Add(new Phase(int.Parse(heading.Groups[1].Value, CultureInfo.InvariantCulture), [], []));
         }
-        else if (line.StartsWith("#", StringComparison.Ordinal))
+        else if (line.StartsWith('#'))
         {
             // Any other heading ends the current phase, e.g. the next milestone.
             phases.Add(new Phase(-1, [], []));
@@ -241,7 +242,7 @@ static List<PhaseProblem> PhaseExitProblems(List<Phase> phases, int lastPhase, L
 static void AppendPhaseExitCheck(StringBuilder report, int lastPhase, List<PhaseProblem> problems)
 {
     report.AppendLine();
-    report.AppendLine($"## Phase exit check: phases 0 to {lastPhase}");
+    report.AppendLine(CultureInfo.InvariantCulture, $"## Phase exit check: phases 0 to {lastPhase}");
     report.AppendLine();
     if (problems.Count == 0)
     {
@@ -249,13 +250,13 @@ static void AppendPhaseExitCheck(StringBuilder report, int lastPhase, List<Phase
         return;
     }
 
-    report.AppendLine($"**Error:** {problems.Count} item(s) keep these phases from being complete.");
+    report.AppendLine(CultureInfo.InvariantCulture, $"**Error:** {problems.Count} item(s) keep these phases from being complete.");
     report.AppendLine();
     report.AppendLine("| Phase | Item | Problem |");
     report.AppendLine("|---|---|---|");
     foreach (var (phase, item, problem) in problems)
     {
-        report.AppendLine($"| {phase} | {item} | {problem} |");
+        report.AppendLine(CultureInfo.InvariantCulture, $"| {phase} | {item} | {problem} |");
     }
 }
 

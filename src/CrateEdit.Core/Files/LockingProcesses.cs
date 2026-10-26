@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
-using System.Text;
 
 namespace CrateEdit.Core.Files;
 
@@ -35,9 +34,9 @@ public static class LockingProcesses
         }
     }
 
-    private static IReadOnlyList<string> FindWithRestartManager(string path)
+    private static List<string> FindWithRestartManager(string path)
     {
-        var key = new StringBuilder(SessionKeyLength);
+        var key = new char[SessionKeyLength];
         Check(RmStartSession(out var session, 0, key));
         try
         {
@@ -63,7 +62,8 @@ public static class LockingProcesses
         }
         finally
         {
-            RmEndSession(session);
+            // A session that cannot be ended only holds memory until the process exits; nothing to do.
+            _ = RmEndSession(session);
         }
     }
 
@@ -102,7 +102,7 @@ public static class LockingProcesses
     }
 
     [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)]
-    private static extern int RmStartSession(out uint sessionHandle, int sessionFlags, StringBuilder sessionKey);
+    private static extern int RmStartSession(out uint sessionHandle, int sessionFlags, [Out] char[] sessionKey);
 
     [DllImport("rstrtmgr.dll")]
     private static extern int RmEndSession(uint sessionHandle);
