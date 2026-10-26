@@ -1,0 +1,48 @@
+# Stryker.NET mutation report on the tag code (src/CrateEdit.Core/Tags), informational.
+# What the report means and how to read it:
+# https://github.com/thomaswening/CrateEdit/blob/main/docs/development.md#mutation-report
+name: Mutation report
+
+on:
+  pull_request:
+    paths:
+      - src/CrateEdit.Core/Tags/**
+      - tests/CrateEdit.Tests/**
+  push:
+    branches: [main]
+    paths:
+      - src/CrateEdit.Core/Tags/**
+      - tests/CrateEdit.Tests/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: Mutation report (informational)
+    runs-on: ubuntu-latest
+    # Surviving mutants point reviewers to tests to doubt; they never block a pull request.
+    continue-on-error: true
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Restore tools
+        run: dotnet tool restore
+      # Settings (project, files to mutate, reporters) are in tests/CrateEdit.Tests/stryker-config.json.
+      - name: Mutate the tag code and run the tests
+        working-directory: tests/CrateEdit.Tests
+        run: dotnet dotnet-stryker --output ../../StrykerOutput
+      - name: Summary
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: cat StrykerOutput/reports/mutation-report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload mutation report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-report
+          path: StrykerOutput/reports
