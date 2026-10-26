@@ -44,6 +44,7 @@ public sealed record TagNotWritable(TagProblem Problem, string? FrameId = null, 
         TagProblem.Malformed => ErrorCodes.TagsMalformed,
         TagProblem.EncodedFrame => ErrorCodes.TagsEncodedFrame,
         TagProblem.DuplicateFrame => ErrorCodes.TagsDuplicateFrame,
-        _ => throw new ArgumentOutOfRangeException(nameof(Problem)),
+        // Only an enum value cast from a number lands here: the error itself is invalid, not an argument.
+        _ => throw new InvalidOperationException($"Unknown {nameof(TagProblem)}: {Problem}."),
     };
 }

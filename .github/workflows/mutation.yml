@@ -1,0 +1,37 @@
+# Documented in docs/development.md, "Tools and checks", "Mutation testing".
+# Informational only: the job never fails a pull request.
+name: Mutation testing
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stryker:
+    name: Stryker.NET on tag and write code
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Restore tools
+        run: dotnet tool restore
+      # The files to mutate and the reporters are set in tests/CrateEdit.Tests/stryker-config.json.
+      - name: Run Stryker
+        working-directory: tests/CrateEdit.Tests
+        run: dotnet stryker --output "${{ github.workspace }}/StrykerOutput"
+      - name: Mutation score in the job summary
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: cat StrykerOutput/reports/mutation-report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-report
+          path: StrykerOutput/reports

@@ -1,0 +1,19 @@
+{
+  "stryker-config": {
+    "project": "CrateEdit.Core.csproj",
+    "test-runner": "mtp",
+    "mutate": [
+      "**/Tags/**/*.cs"
+    ],
+    "reporters": [
+      "html",
+      "markdown",
+      "progress"
+    ],
+    "thresholds": {
+      "high": 80,
+      "low": 60,
+      "break": 0
+    }
+  }
+}

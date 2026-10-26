@@ -387,3 +387,17 @@ dotnet_naming_style.s_camelcase.required_suffix =
 dotnet_naming_style.s_camelcase.word_separator = 
 dotnet_naming_style.s_camelcase.capitalization = camel_case
 
+#### Coding-guideline analysers ####
+[*.cs]
+
+# Constant patterns as [GeneratedRegex] methods (coding guideline: GeneratedRegex instead of new Regex).
+dotnet_diagnostic.SYSLIB1045.severity = warning
+# No exceptions from property getters (coding guideline: properties are cheap and free of side effects).
+dotnet_diagnostic.CA1065.severity = warning
+# No ignored results (coding guideline: results are return values).
+dotnet_diagnostic.CA1806.severity = warning
+
+# The two tool scripts still hold 12 constant patterns as new Regex or Regex.Match. Until they are
+# converted, SYSLIB1045 stays a suggestion there so that CI can run them.
+[tools/*.cs]
+dotnet_diagnostic.SYSLIB1045.severity = suggestion
