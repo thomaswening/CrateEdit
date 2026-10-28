@@ -11,10 +11,6 @@ on:
 permissions:
   contents: read
 
-env:
-  # The last phase of the roadmap that is complete. Raise it in the pull request that completes a phase.
-  LAST_COMPLETED_PHASE: 1
-
 jobs:
   source-checks:
     name: Source checks
@@ -55,7 +51,6 @@ jobs:
             --manual docs/manual-verification.md \
             --results TestResults/results.xml \
             --roadmap docs/roadmap.md \
-            --phase "$LAST_COMPLETED_PHASE" \
             --output TestResults/traceability.md > /dev/null || status=$?
           cat TestResults/traceability.md >> "$GITHUB_STEP_SUMMARY"
           exit $status

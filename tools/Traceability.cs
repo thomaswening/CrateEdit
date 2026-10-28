@@ -3,7 +3,7 @@
 // Lists every requirement from docs/requirements.md with the tests tagged with it
 // ([Trait("Req", "REQ-NNN")]) and their results, plus requirements verified manually
 // (docs/manual-verification.md). Fails if a test references an unknown requirement.
-// With --phase N, also fails unless phases 0 to N of docs/roadmap.md are complete.
+// With --roadmap, also fails unless every phase that docs/roadmap.md marks complete is complete.
 //
 // What each check means and what to do when it fails:
 // https://github.com/thomaswening/CrateEdit/blob/main/docs/tools/traceability.md
@@ -11,7 +11,7 @@
 // Usage:
 //   dotnet run tools/Traceability.cs -- --requirements docs/requirements.md
 //       --manual docs/manual-verification.md --results <xunit.xml> [--results <xunit.xml> ...]
-//       --output <report.md> [--roadmap docs/roadmap.md --phase <N>]
+//       --output <report.md> [--roadmap docs/roadmap.md]
 //
 // Test results are xUnit XML reports (test assembly run with -xml). With several result files
 // (e.g. one per OS), a requirement only counts as passing if its tests pass in all of them.
@@ -82,13 +82,12 @@ if (unknown.Count > 0)
 }
 
 var phaseExitFailed = false;
-if (options.ContainsKey("--phase"))
+if (options.ContainsKey("--roadmap"))
 {
-    var lastPhase = int.Parse(Single(options, "--phase"), CultureInfo.InvariantCulture);
     var phases = ReadPhases(Single(options, "--roadmap"), requirements);
     var resolved = ReadResolvedDecisions(requirementsPath);
-    var problems = PhaseExitProblems(phases, lastPhase, rows, resolved);
-    AppendPhaseExitCheck(report, lastPhase, problems);
+    var problems = PhaseExitProblems(phases, rows, resolved);
+    AppendPhaseExitCheck(report, phases.Where(phase => phase.IsComplete).ToList(), problems);
     phaseExitFailed = problems.Count > 0;
 }
 
@@ -148,8 +147,8 @@ static HashSet<string> ReadResolvedDecisions(string requirementsPath) =>
 
 /// <summary>
 /// The phases of the roadmap: the requirements on each "Requirements:" line, with ranges such as
-/// "REQ-123 to REQ-129" expanded to the requirements that exist, and the open decisions on each
-/// "Resolves:" and "Needs:" line.
+/// "REQ-123 to REQ-129" expanded to the requirements that exist, the open decisions on each
+/// "Resolves:" and "Needs:" line, and the value of the "Status:" line if there is one.
 /// </summary>
 static List<Phase> ReadPhases(string roadmapPath, List<Requirement> requirements)
 {
@@ -164,6 +163,10 @@ static List<Phase> ReadPhases(string roadmapPath, List<Requirement> requirements
         {
             // Any other heading ends the current phase, e.g. the next milestone.
             phases.Add(new Phase(-1, [], []));
+        }
+        else if (phases.Count > 0 && phases[^1].Number >= 0 && Patterns.PhaseStatus().Match(line) is { Success: true } status)
+        {
+            phases[^1] = phases[^1] with { Status = status.Groups[1].Value.Trim() };
         }
         else if (phases.Count > 0 && phases[^1].Number >= 0)
         {
@@ -208,14 +211,18 @@ static IEnumerable<string> ExpandRange(Match match, List<Requirement> requiremen
 static string WithoutLinks(string line) => Patterns.MarkdownLink().Replace(line, "$1");
 
 /// <summary>
-/// Everything that keeps phases 0 to <paramref name="lastPhase"/> from being complete: a
-/// requirement that is not passing and not verified by hand, a requirement the roadmap names
-/// but requirements.md does not define, and an open decision that is not resolved.
+/// Everything that keeps the phases marked complete from being complete: a requirement that is
+/// not passing and not verified by hand, a requirement the roadmap names but requirements.md does
+/// not define, and an open decision that is not resolved. A status line other than
+/// "complete (date)" is reported too, so a typo cannot silently drop a phase from the check.
 /// </summary>
-static List<PhaseProblem> PhaseExitProblems(List<Phase> phases, int lastPhase, List<Row> rows, HashSet<string> resolved)
+static List<PhaseProblem> PhaseExitProblems(List<Phase> phases, List<Row> rows, HashSet<string> resolved)
 {
-    var problems = new List<PhaseProblem>();
-    foreach (var phase in phases.Where(phase => phase.Number <= lastPhase))
+    var problems = phases
+        .Where(phase => phase.Status is not null && !phase.IsComplete)
+        .Select(phase => new PhaseProblem(phase.Number, $"Status: {phase.Status}", "not \"complete (date)\""))
+        .ToList();
+    foreach (var phase in phases.Where(phase => phase.IsComplete))
     {
         foreach (var id in phase.Requirements.Distinct())
         {
@@ -239,10 +246,16 @@ static List<PhaseProblem> PhaseExitProblems(List<Phase> phases, int lastPhase, L
     return problems;
 }
 
-static void AppendPhaseExitCheck(StringBuilder report, int lastPhase, List<PhaseProblem> problems)
+static void AppendPhaseExitCheck(StringBuilder report, List<Phase> completePhases, List<PhaseProblem> problems)
 {
+    var checkedPhases = completePhases.Count switch
+    {
+        0 => "no phase is marked complete",
+        1 => $"phase {completePhases[0].Number}",
+        _ => "phases " + string.Join(", ", completePhases.Select(phase => phase.Number)),
+    };
     report.AppendLine();
-    report.AppendLine(CultureInfo.InvariantCulture, $"## Phase exit check: phases 0 to {lastPhase}");
+    report.AppendLine(CultureInfo.InvariantCulture, $"## Phase exit check: {checkedPhases}");
     report.AppendLine();
     if (problems.Count == 0)
     {
@@ -305,6 +318,14 @@ internal static partial class Patterns
     [GeneratedRegex(@"^### Phase (\d+):")]
     public static partial Regex PhaseHeading();
 
+    /// <summary>"- Status: complete (13 October 2026)" under a phase heading.</summary>
+    [GeneratedRegex(@"^- Status:(.*)$")]
+    public static partial Regex PhaseStatus();
+
+    /// <summary>The one status value that marks a phase complete, e.g. "complete (13 October 2026)".</summary>
+    [GeneratedRegex(@"^complete \(\d{1,2} [A-Z][a-z]+ \d{4}\)$")]
+    public static partial Regex CompleteStatus();
+
     /// <summary>"REQ-108" or "REQ-123 to REQ-129".</summary>
     [GeneratedRegex(@"(REQ-\d{3})(?: to (REQ-\d{3}))?")]
     public static partial Regex RequirementOrRange();
@@ -334,6 +355,10 @@ internal sealed record TestResult(string Name, string Result, HashSet<string> Re
 
 internal sealed record Row(Requirement Requirement, Status Status, List<string> Names);
 
-internal sealed record Phase(int Number, List<string> Requirements, List<string> Decisions);
+/// <summary>A phase of the roadmap. <see cref="Status"/> is null while the phase has no status line.</summary>
+internal sealed record Phase(int Number, List<string> Requirements, List<string> Decisions, string? Status = null)
+{
+    public bool IsComplete => Status is not null && Patterns.CompleteStatus().IsMatch(Status);
+}
 
 internal sealed record PhaseProblem(int Phase, string Item, string Problem);

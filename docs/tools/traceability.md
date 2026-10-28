@@ -1,17 +1,17 @@
 # Traceability report and phase exit check
 
-`tools/Traceability.cs` lists every requirement with the tests tagged with it and their results. With `--phase N` it also checks that phases 0 to N of the [roadmap](../roadmap.md) are complete, so a finished phase cannot silently lose a test or a manual check.
+`tools/Traceability.cs` lists every requirement with the tests tagged with it and their results. With `--roadmap` it also checks every phase that the [roadmap](../roadmap.md) marks complete, so a finished phase cannot silently lose a test or a manual check.
 
 ## When it runs and what a failure blocks
 
-It runs in the CI workflow ([`ci.yml`](../../.github/workflows/ci.yml)), job "Build and test", step "Requirements traceability and phase exit check", on Windows and on macOS, for every pull request and every push to `main`. The step passes `--phase` the value of `LAST_COMPLETED_PHASE` at the top of `ci.yml`. A failure turns the job red, so the pull request is not merged. The report appears in the job summary and in the `test-results-<os>` artifact as `traceability.md`.
+It runs in the CI workflow ([`ci.yml`](../../.github/workflows/ci.yml)), job "Build and test", step "Requirements traceability and phase exit check", on Windows and on macOS, for every pull request and every push to `main`. The step passes `--roadmap docs/roadmap.md`, so it checks every phase marked complete there. A failure turns the job red, so the pull request is not merged. The report appears in the job summary and in the `test-results-<os>` artifact as `traceability.md`.
 
 ```mermaid
 flowchart LR
   results["results.xml<br/>(test run)"] --> tool["Traceability.cs"]
   reqs["requirements.md"] --> tool
   manual["manual-verification.md"] --> tool
-  roadmap["roadmap.md<br/>(with --phase)"] --> tool
+  roadmap["roadmap.md<br/>(phases marked complete)"] --> tool
   tool --> report["traceability.md<br/>job summary"]
   tool --> exit{"rule broken?"}
   exit -- "no" --> green["step passes"]
@@ -52,7 +52,7 @@ Each requirement gets one status from the tests tagged `[Trait("Req", "REQ-nnn")
 
 ### Rule 3: every requirement of a completed phase is passing or verified by hand
 
-Checked only with `--phase N`, for phases 0 to N.
+Checked for every phase whose status line reads `- Status: complete (date)` ([Rule 5](#rule-5-a-status-line-marks-a-phase-complete-with-its-date)).
 
 **Why:** a phase is complete only when each of its requirements is covered ([development.md](../development.md#requirements-traceability)). Without the check, a later change could remove a test or a manual row unnoticed.
 
@@ -66,11 +66,11 @@ Checked only with `--phase N`, for phases 0 to N.
 | No test and no manual row | [REQ-091](../requirements.md#req-091) in Phase 1 before its test | — |
 | A range with a gap | — | `REQ-017 to REQ-023` covers only the requirements defined in between |
 | Roadmap names a requirement that is not defined | `REQ-999 \| not defined in requirements.md` | — |
-| Requirement of a later phase | — | not checked until `LAST_COMPLETED_PHASE` reaches that phase |
+| Requirement of a phase not marked complete | — | not checked until its phase gets `- Status: complete (date)` |
 
 ### Rule 4: every open decision of a completed phase is resolved
 
-Checked only with `--phase N`, for phases 0 to N.
+Checked for every phase marked complete, as in Rule 3.
 
 **Why:** a phase depends on the decisions it resolves (`- Resolves:`) and the ones it needs (`- Needs:`). If one is still open, the phase was built on a guess.
 
@@ -81,6 +81,21 @@ Checked only with `--phase N`, for phases 0 to N.
 | Resolved decision | — | [OPEN-C](../requirements.md#open-c) in Phase 1: `**Resolved** by ADR-0010 …` |
 | Open decision of a completed phase | [OPEN-N](../requirements.md#open-n) once Phase 2 is marked complete | — |
 
+### Rule 5: a status line marks a phase complete, with its date
+
+Checked for every phase that has a `- Status:` line.
+
+**Why:** the status line decides which phases Rules 3 and 4 check. A typo such as `completed` must not quietly take a finished phase out of the check.
+
+**How it decides:** a phase without a status line is in progress and not checked. A status line must read exactly `complete (` plus a date such as `13 October 2026` plus `)`. Any other value is reported as `| 1 | Status: completed | not "complete (date)" |`.
+
+| Case | Reported | Accepted |
+|---|---|---|
+| Finished phase | — | `- Status: complete (13 October 2026)` under `### Phase 1` |
+| Phase in progress | — | no status line |
+| Typo or other word | `- Status: completed`, `- Status: done` | — |
+| Date missing | `- Status: complete` | — |
+
 ## What to do when it fails
 
 Open the job summary of the failing job. The table under "Phase exit check" names the phase, the requirement or decision, and the problem.
@@ -90,17 +105,33 @@ Open the job summary of the failing job. The table under "Phase exit check" name
 - **Failing:** fix the code or the test. The test step shows the failure.
 - **not defined in requirements.md:** correct the ID in the roadmap.
 - **not resolved:** resolve the decision in `requirements.md`, or move the requirement that needs it to a later phase in the roadmap.
+- **not "complete (date)":** correct the status line to `- Status: complete (13 October 2026)`, or remove it while the phase is in progress.
 
 There are no exemptions. A requirement that cannot be finished in its phase moves to a later phase in the roadmap, so the move is visible in review. [REQ-125](../requirements.md#req-125) moved from Phase 0 to Phase 2 that way on 26 October 2026.
 
-When a pull request completes a phase, it raises `LAST_COMPLETED_PHASE` in `ci.yml` in the same pull request.
+## Completing a phase
+
+The pull request that finishes a phase also marks it complete. It adds `- Status: complete (date)` under the phase's heading in the [roadmap](../roadmap.md). CI then checks the phase in that very pull request, before anything is merged. The reviewer sees the mark next to the work that earns it. From then on, every later pull request checks the phase again.
+
+```mermaid
+flowchart TD
+  work["last pull request of the phase:<br/>tests tagged, manual checks dated"] --> mark["same pull request adds<br/>- Status: complete (date)<br/>to the phase in roadmap.md"]
+  mark --> check{"phase exit check in CI:<br/>Rules 3 to 5 hold?"}
+  check -- "yes" --> review["green: review the mark<br/>with the work, then merge"]
+  review --> later["every later pull request<br/>checks the phase again"]
+  check -- "no" --> table["red: the table names<br/>phase, item and problem"]
+  table --> fix["add a test, date a manual check,<br/>or move the requirement to a later phase"]
+  fix --> check
+```
+
+Phases 0 and 1 were marked this way on 28 October 2026, with the dates their last pull requests were merged.
 
 ## Run it locally
 
 ```bash
 dotnet build -c Release
 dotnet tests/CrateEdit.Tests/bin/Release/net10.0/CrateEdit.Tests.dll -xml TestResults/results.xml
-dotnet run tools/Traceability.cs -- --requirements docs/requirements.md --manual docs/manual-verification.md --results TestResults/results.xml --roadmap docs/roadmap.md --phase 1 --output TestResults/traceability.md
+dotnet run tools/Traceability.cs -- --requirements docs/requirements.md --manual docs/manual-verification.md --results TestResults/results.xml --roadmap docs/roadmap.md --output TestResults/traceability.md
 ```
 
 The exit code is 0 when all rules hold and 1 otherwise. The tool has no tests of its own. CI runs it on the real documents with every pull request.

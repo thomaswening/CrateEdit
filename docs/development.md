@@ -99,7 +99,7 @@ Set `CRATEEDIT_WRITE_DIR` as well to run the safe-write tests on specific storag
 - CI produces a traceability report listing every requirement, the tests tagged with it, and a status such as **Passing**, **Manual** or **Not covered**. It appears in each CI job's summary and in the `test-results-<os>` artifact.
 - The report and a unit test both fail on tags that name a requirement that does not exist.
 - Requirements that cannot be automated (e.g. "Rekordbox reads the written key", performance on the minimum configuration) are listed in `docs/manual-verification.md` with steps, and checked manually.
-- **Phase exit check:** a phase is complete only when every requirement assigned to it in the roadmap is either covered by passing tests or listed and checked in the manual verification list, and the open decisions it resolves or needs are resolved. CI checks this for every phase up to the last completed one.
+- **Phase exit check:** a phase is complete only when every requirement assigned to it in the roadmap is either covered by passing tests or listed and checked in the manual verification list, and the open decisions it resolves or needs are resolved. CI checks this for every phase the roadmap marks complete, as [Completing a phase](tools/traceability.md#completing-a-phase) describes.
 
 [Traceability report and phase exit check](tools/traceability.md) has the rules, what to do when the check fails and how to run it locally.
 

@@ -6,17 +6,20 @@ Draft | 9 October 2026 | Based on requirements v0.4
 - **Every phase ends with a runnable app** that does something useful, even if read-only.
 - **Open decisions are resolved just before the phase that needs them**, not all up front. The "Needs" line of each phase lists which ones.
 - **Guardrails are verified automatically on every change.** Each phase adds unit, integration and end-to-end tests for its requirements, tagged with requirement IDs; CI must pass before merging (see [development.md](development.md)).
+- **A finished phase is marked `- Status: complete (date)`** in the pull request that finishes it. CI checks every phase marked so on every change ([Completing a phase](tools/traceability.md#completing-a-phase)).
 - **Shortcuts and commands go through one registry from day one.** Many requirements say "quick action and configurable shortcut", so actions are defined once and bound to keys later, instead of retrofitting.
 
 ## Milestone 1 — Read-only collection browser
 
 ### Phase 0: Foundations
 Solution skeleton: `CrateEdit.App` (Avalonia + Material.Avalonia, CommunityToolkit.Mvvm), `CrateEdit.Core` (domain, no UI dependency), `CrateEdit.Tests`. CI on GitHub Actions building and testing on Windows and macOS. App-data location, local diagnostic logging with 30-day cleanup, command/shortcut registry with default bindings, English/German UI resources and text-matching rules, release-please and the requirements traceability report.
+- Status: complete (12 October 2026)
 - Requirements: [REQ-108](requirements.md#req-108) (groundwork), [REQ-109](requirements.md#req-109), [REQ-116](requirements.md#req-116), [REQ-117](requirements.md#req-117), [REQ-118](requirements.md#req-118), [REQ-123](requirements.md#req-123), [REQ-124](requirements.md#req-124), [REQ-126](requirements.md#req-126) to [REQ-129](requirements.md#req-129)
 - Needs: nothing
 
 ### Phase 1: Tag layer and write spike
 Read and write the 9 logical fields on MP3 and WAV with CrateEdit's own frame-level tag editor (TagLib# failed the preservation spike, see [ADR-0008](adr/0008-own-id3v2-frame-editor.md)), mapped to one consistent field model. Automated tests on real Rekordbox/Serato/Traktor-tagged files proving a write changes only the edited fields and preserves audio and all other frames (GEOB, cues, beatgrids). Spike the safe-write technique (temporary file + atomic replace, verification) on local disk, USB and a Google Drive mount.
+- Status: complete (13 October 2026)
 - Requirements: [REQ-003](requirements.md#req-003), [REQ-006](requirements.md#req-006), [REQ-007](requirements.md#req-007), [REQ-088](requirements.md#req-088), [REQ-089](requirements.md#req-089), [REQ-091](requirements.md#req-091), [REQ-130](requirements.md#req-130)
 - Resolves: [OPEN-C](requirements.md#open-c), [OPEN-D](requirements.md#open-d)
 - Needs: sample files from the user's collection (worked on as copies only)
