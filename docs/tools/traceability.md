@@ -91,7 +91,7 @@ Checked for every phase that has a `- Status:` line.
 
 | Case | Reported | Accepted |
 |---|---|---|
-| Finished phase | — | `- Status: complete (13 October 2026)` under `### Phase 1` |
+| Finished phase | — | `- Status: complete (12 October 2026)` under `### Phase 0` |
 | Phase in progress | — | no status line |
 | Typo or other word | `- Status: completed`, `- Status: done` | — |
 | Date missing | `- Status: complete` | — |
@@ -124,7 +124,7 @@ flowchart TD
   fix --> check
 ```
 
-Phases 0 and 1 were marked this way on 28 October 2026, with the dates their last pull requests were merged.
+Phase 0 was marked this way on 28 October 2026, with the date its last pull request was merged. Phase 1 gets its mark once the review of its core tests ([#22](https://github.com/thomaswening/CrateEdit/pull/22)) is done.
 
 ## Run it locally
 
