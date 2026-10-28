@@ -234,7 +234,15 @@ No output means no hit.
 | Timeout | the mutant made a test hang. Counts as killed |
 | Compile error, ignored | not counted in the score |
 
-In a review, read the surviving mutants in the lines the pull request changed. Either a test should fail on them, or the mutant does not change behaviour (an equivalent mutant, such as a changed log message). The score is a pointer, not a target.
+In a review, read the surviving mutants in the lines the pull request changed and decide each by the table below. The score is a pointer, not a target: it says how many of Stryker's small breaks the tests caught, not how much of the code is tested.
+
+| What survived | Example | Means | Do |
+|---|---|---|---|
+| A change that alters behaviour | `>` to `>=` at a frame-size boundary | a bug there would slip through | add a test, or an assertion to an existing one |
+| An equivalent mutant: nothing observable changes | `new List<Frame>(16)` to `new List<Frame>()` | nothing about the tests | ignore it. If the code is redundant, simplify it |
+| Only message or log text | `"Frame too short"` to `""` | the tests do not check the wording | usually ignore it. Test the text where users read it |
+| Many survivors in one method | a test calls the method but only checks that it does not throw | a weak test | strengthen that test's assertions |
+| No coverage | no test runs the line | untested, a stronger signal than a survivor | test it, or ask whether the code is needed |
 
 Run locally (the version is pinned in [`dotnet-tools.json`](../dotnet-tools.json)):
 ```bash
