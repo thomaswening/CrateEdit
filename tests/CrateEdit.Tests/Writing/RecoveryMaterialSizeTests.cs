@@ -28,6 +28,15 @@ public sealed class RecoveryMaterialSizeTests : IDisposable
     /// <summary>The record stores the tag as Base64, which is a third larger than the tag; 2 leaves margin.</summary>
     private const int TagEncodingFactor = 2;
 
+    /// <summary>ID3v2.4, the tag version the test file starts with.</summary>
+    private const int TagVersion = 4;
+
+    /// <summary>
+    /// No room to grow in the original tag, so the changes make it larger. The size limit does not
+    /// depend on it: the record holds the original tag, whatever the new one looks like.
+    /// </summary>
+    private const int NoPadding = 0;
+
     private readonly string _dir = Directory.CreateTempSubdirectory("crateedit-recovery-size-").FullName;
     private readonly string _path;
     private readonly string _storeDirectory;
@@ -61,7 +70,7 @@ public sealed class RecoveryMaterialSizeTests : IDisposable
     public void Recovery_material_is_bounded_by_the_tag_whatever_the_audio_length(int audioLength)
     {
         // Arrange
-        var tag = Mp3Fixture.Tag(4, [.. Frames.BeatportLike(), .. Frames.DjSoftwareData()], padding: 16);
+        var tag = Mp3Fixture.Tag(TagVersion, [.. Frames.BeatportLike(), .. Frames.DjSoftwareData()], padding: NoPadding);
         var audio = Mp3Fixture.Audio(audioLength);
         File.WriteAllBytes(_path, [.. tag, .. audio]);
         var limit = (TagEncodingFactor * tag.Length) + RecordOverhead;
