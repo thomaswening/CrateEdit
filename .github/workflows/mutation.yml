@@ -1,30 +1,19 @@
-# Stryker.NET mutation report on the tag code (src/CrateEdit.Core/Tags), informational.
-# What the report means and how to read it:
-# https://github.com/thomaswening/CrateEdit/blob/main/docs/development.md#mutation-report
-name: Mutation report
+# Documented in docs/development.md, "Tools and checks", "Mutation testing".
+# Informational only: the job never fails a pull request.
+name: Mutation testing
 
 on:
   pull_request:
-    paths:
-      - src/CrateEdit.Core/Tags/**
-      - tests/CrateEdit.Tests/**
-  push:
-    branches: [main]
-    paths:
-      - src/CrateEdit.Core/Tags/**
-      - tests/CrateEdit.Tests/**
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  mutation:
-    name: Mutation report (informational)
-    runs-on: ubuntu-latest
-    # Surviving mutants point reviewers to tests to doubt; they never block a pull request.
+  stryker:
+    name: Stryker.NET on tag and write code
+    runs-on: windows-latest
     continue-on-error: true
-    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
@@ -32,15 +21,15 @@ jobs:
           global-json-file: global.json
       - name: Restore tools
         run: dotnet tool restore
-      # Settings (project, files to mutate, reporters) are in tests/CrateEdit.Tests/stryker-config.json.
-      - name: Mutate the tag code and run the tests
+      # The files to mutate and the reporters are set in tests/CrateEdit.Tests/stryker-config.json.
+      - name: Run Stryker
         working-directory: tests/CrateEdit.Tests
-        run: dotnet dotnet-stryker --output ../../StrykerOutput
-      - name: Summary
+        run: dotnet stryker --output "${{ github.workspace }}/StrykerOutput"
+      - name: Mutation score in the job summary
         if: ${{ !cancelled() }}
         shell: bash
         run: cat StrykerOutput/reports/mutation-report.md >> "$GITHUB_STEP_SUMMARY"
-      - name: Upload mutation report
+      - name: Upload report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:

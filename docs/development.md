@@ -108,9 +108,11 @@ GitHub Actions run on every pull request and on every push to `main`. Jobs marke
 
 ```mermaid
 flowchart LR
-  pr["pull request<br/>or push to main"] --> ci["ci.yml"]
+  pr["pull request"] --> ci["ci.yml"]
+  push["push to main"] --> ci
   pr --> title["pr-title.yml<br/>conventional commit title"]
-  pr -- "Tags or tests changed" --> mutation["mutation.yml<br/>Stryker.NET report"]
+  pr --> mutation["mutation.yml<br/>Stryker.NET report"]
+  ci --> source["Source checks<br/>invisible characters"]
   ci --> build["Build and test<br/>Windows, macOS"]
   ci --> format["Formatting"]
   ci --> coverage["Coverage report"]
@@ -120,22 +122,21 @@ flowchart LR
 
 | Workflow, job | Checks | Blocks |
 |---|---|---|
-| `ci.yml`, Build and test | build with analysers, requirement links, all tests, [traceability and phase exit check](tools/traceability.md) | yes |
+| `ci.yml`, Source checks | [no invisible characters in C# sources](#invisible-characters) | yes |
+| `ci.yml`, Build and test | build with [analysers](#analysers-and-formatting), requirement links, all tests, [traceability and phase exit check](tools/traceability.md) | yes |
 | `ci.yml`, Formatting | [code matches `.editorconfig`](#analysers-and-formatting) | yes |
 | `ci.yml`, Coverage report | [which lines the tests run](#coverage-report) | no |
-| `mutation.yml` | [which changes to the tag code no test notices](#mutation-report) | no |
+| `mutation.yml` | [which changes to the tag code no test notices](#mutation-testing) | no |
 | `pr-title.yml` | the pull request title is a conventional commit | yes |
 
 On `main`, the release-please workflow maintains the release PR. Building unsigned Windows and macOS packages and attaching them to the GitHub release is added before the first release (Milestone 2).
 
 ### Analysers and formatting
-**Rule 1: the build has no analyser finding.** `Directory.Build.props` turns on the recommended .NET code analysers (`AnalysisLevel` `latest-recommended`) and the code style of `.editorconfig` (`EnforceCodeStyleInBuild`). With `TreatWarningsAsErrors`, every finding fails the build, locally as in CI. The analysers catch bugs a reviewer easily misses, such as an ignored return value or a culture-dependent `int.Parse`. The coding guideline raises three rules to warnings: `SYSLIB1045` (a constant pattern is a `[GeneratedRegex]` method), `CA1065` (no exceptions from property getters) and `CA1806` (no ignored results). The tools in `tools/` get the same analysers when `dotnet run` builds them.
+**Rule 1: the build has no analyser finding.** `Directory.Build.props` turns on the recommended .NET code analysers (`AnalysisLevel` `latest-recommended`) and the code style of `.editorconfig` (`EnforceCodeStyleInBuild`). With `TreatWarningsAsErrors`, every finding fails the build, locally as in CI. The analysers catch bugs a reviewer easily misses, such as an ignored return value or a culture-dependent `int.Parse`. The coding guideline raises three more rules to warnings, described in [Analysers in the build](#analysers-in-the-build). The tools in `tools/` get the same analysers when `dotnet run` builds them.
 
 | Case | Reported | Accepted |
 |---|---|---|
-| Ignored result of a native call | `RmEndSession(session);` (CA1806) | `_ = RmEndSession(session);` with a comment why |
 | Culture-dependent parsing | `int.Parse(text)` (CA1305) | `int.Parse(text, CultureInfo.InvariantCulture)` |
-| Regular expression built at run time from a constant | `new Regex(@"^REQ-\d{3}$")` (SYSLIB1045) | a `[GeneratedRegex]` method |
 | Test name with underscores | — | `Clearing_a_field_removes_its_frame` (CA1707 is off in `tests/`) |
 | A type named `Error` | — | `Error` (CA1716 is off: CrateEdit is not a library for Visual Basic) |
 
@@ -166,21 +167,82 @@ dotnet dotnet-coverage collect -f cobertura -o TestResults/coverage.cobertura.xm
 dotnet reportgenerator -reports:TestResults/coverage.cobertura.xml -targetdir:TestResults/coverage "-reporttypes:Html" "-assemblyfilters:+CrateEdit.Core;+CrateEdit.App"
 ```
 
-### Mutation report
-Mutation testing checks whether the tests would notice a bug. [Stryker.NET](https://stryker-mutator.io/docs/stryker-net/introduction/) makes one small change at a time to the code under test, a **mutant**: for example `<` becomes `<=`, or a condition becomes `true`. It runs the tests against each mutant. A mutant that makes a test fail is **killed**. One that every test survives shows code whose behaviour no test checks. In [#21](https://github.com/thomaswening/CrateEdit/pull/21) such a check found the iTunes comment tests passing without testing anything.
+### Dependency updates
+Dependabot (`.github/dependabot.yml`) opens update pull requests once a week: NuGet packages in `Directory.Packages.props`, the .NET tools in `dotnet-tools.json`, and the actions in `.github/workflows`. Minor and patch updates come together in one pull request per ecosystem. Each major update gets its own. Titles are conventional commits (`build(deps): …`, `ci(deps): …`), so they pass the title check and stay out of the changelog. Review them like any pull request: CI must be green, and a major update needs a look at its release notes.
 
-The `mutation.yml` workflow mutates `src/CrateEdit.Core/Tags`, where a wrong test costs most, on every pull request that changes that code or the tests, on `main`, and by hand ("Run workflow"). Settings are in `tests/CrateEdit.Tests/stryker-config.json`. They select Stryker's Microsoft Testing Platform runner (`"test-runner": "mtp"`, a preview in Stryker 5.0). The default VSTest runner does not work with these xUnit v3 tests. On 26 October 2026 it killed 11 of 744 mutants (1.5 %). On `Id3v1Tag.cs` alone, the MTP runner killed 25 where VSTest killed 1. The job summary shows the mutation score per file, the share of mutants killed. The `mutation-report` artifact holds an HTML report that shows each surviving mutant in its line. It is informational. In a review, look at the survivors in the code the pull request changes: each is either a missing assertion or code that does nothing observable.
+## Tools and checks
+Three checks enforce rules of Thomas's coding guideline (the `coding-guideline` skill in [claude-config](https://github.com/thomaswening/claude-config), "Automated checks" in its C# reference). Rules without a check stay on the review checklist.
 
-It takes several minutes. To run it locally:
+```mermaid
+flowchart LR
+  pr["pull request"] --> ci["ci.yml"]
+  main["push to main"] --> ci
+  pr --> mutation["mutation.yml"]
+  manual["Run workflow<br/>(by hand)"] --> mutation
+  ci --> source["job Source checks<br/>invisible characters"]
+  ci --> build["job Build and test<br/>analysers as errors"]
+  source --> blocks["red: PR cannot be merged"]
+  build --> blocks
+  mutation --> stryker["job Stryker.NET<br/>Tags folder"]
+  stryker --> report["report in job summary<br/>and artifact, never red"]
+```
 
+### Analysers in the build
+Three .NET analysers are raised to warnings in [`.editorconfig`](../.editorconfig). `TreatWarningsAsErrors` in [`Directory.Build.props`](../Directory.Build.props) turns them into errors. They run in every `dotnet build`, so in both jobs of the "Build and test" matrix in [`ci.yml`](../.github/workflows/ci.yml), and in Visual Studio as you type. A hit fails the build and blocks the pull request.
+
+| Analyser | Rule | Reported | Accepted |
+|---|---|---|---|
+| SYSLIB1045 | **A regular expression known at compile time is a `[GeneratedRegex]` method.** | `new Regex(@"^REQ-\d{3}$")`, `Regex.IsMatch(id, @"^REQ-\d{3}$")` | `[GeneratedRegex(@"^REQ-\d{3}$")] private static partial Regex RequirementId();` |
+| CA1065 | **A property getter, operator or `Equals` does not throw an unexpected exception type.** | `_ => throw new ArgumentOutOfRangeException(nameof(Problem))` in a `Code` getter | `_ => throw new InvalidOperationException(...)` in a getter. CA1065 accepts `InvalidOperationException`, `NotSupportedException` and `KeyNotFoundException` there |
+| CA1806 | **A returned result is used or discarded on purpose.** | `RmEndSession(session);` | `_ = RmEndSession(session);` with a comment why the result does not matter |
+
+The message names the file, line and analyser, e.g. `FileAccessError.cs(44,14): error CA1065: get_Code creates an exception of type ArgumentOutOfRangeException`. Change the code as in the "Accepted" column. Where the rule does not fit, suppress that one member with `[SuppressMessage(..., Justification = "...")]` and say why. Never turn the analyser off for a file: that hides the next hit too. Current exemption:
+
+- `Result` and `Result<T>`: the implicit operators from `Error` throw on null, because turning a null error into a success would hide the bug.
+
+Run locally with `dotnet build -c Release`.
+
+### Invisible characters
+**A C# source file holds no invisible character written literally.** A literal non-breaking space or byte order mark looks like nothing in a review. In PR 21 `Mp3Fixture` held a literal byte order mark that nobody could see. Write such a character as an escape, `"﻿"`.
+
+The "Source checks" job in [`ci.yml`](../.github/workflows/ci.yml) runs on every pull request and push to `main`. It searches the tracked `*.cs` files with `git grep` and lists every line with a hit as `path:line:text`. Any hit fails the job and blocks the pull request.
+
+| Case | Result |
+|---|---|
+| `" "` (escape) | accepted |
+| a byte order mark at the start of a line, as an editor writes at the start of a file | accepted |
+| a literal byte order mark anywhere else | reported |
+| a literal non-breaking space (U+00A0), soft hyphen (U+00AD), zero-width space, non-joiner or joiner (U+200B to U+200D), or word joiner (U+2060) | reported |
+| a confusable letter such as a Cyrillic `а` | not searched for: code may hold non-Latin text |
+
+When it fails, open the listed line, find the character (an editor that shows invisible characters helps) and replace it with its `\uXXXX` escape. Run it locally in Git Bash:
+```bash
+git grep -nP '(?<!^)\x{FEFF}|[\x{00A0}\x{00AD}\x{200B}-\x{200D}\x{2060}]' -- '*.cs'
+```
+No output means no hit.
+
+### Mutation testing
+**A test of the tag and write code fails when that code is broken.** In PR 21 the iTunes comment tests passed without testing anything. Only breaking the code showed it. [Stryker.NET](https://stryker-mutator.io/docs/stryker-net/introduction/) makes many such small breaks (mutants), such as `<` to `<=` or a removed statement, and runs the tests against each. A mutant that no test fails on survives and points to a test to doubt.
+
+[`mutation.yml`](../.github/workflows/mutation.yml) runs on every pull request and by hand (Actions, "Mutation testing", "Run workflow"). It mutates `src/CrateEdit.Core/Tags/**`, which holds the tag readers and writers and the safe write in `Tags/Writing`, as set in [`tests/CrateEdit.Tests/stryker-config.json`](../tests/CrateEdit.Tests/stryker-config.json). The config picks the Microsoft Testing Platform runner (`mtp`). The default VSTest runner does not see the mutants with xunit v3: it scored 2 % on 26 October 2026, where `mtp` scores 80 % on the same file. It takes several minutes. **It never blocks a pull request**: the job does not fail on a low score and is marked `continue-on-error`. The score and a table per file appear in the job summary. The HTML report, with each surviving mutant shown in the code, is the `mutation-report` artifact.
+
+| Mutant status | Means |
+|---|---|
+| Killed | a test failed on it: good |
+| Survived | every test passed: look at the tests for that line |
+| No coverage | no test runs that line at all |
+| Timeout | the mutant made a test hang. Counts as killed |
+| Compile error, ignored | not counted in the score |
+
+In a review, read the surviving mutants in the lines the pull request changed. Either a test should fail on them, or the mutant does not change behaviour (an equivalent mutant, such as a changed log message). The score is a pointer, not a target.
+
+Run locally (the version is pinned in [`dotnet-tools.json`](../dotnet-tools.json)):
 ```bash
 dotnet tool restore
 cd tests/CrateEdit.Tests
-dotnet dotnet-stryker
+dotnet stryker
 ```
-
-### Dependency updates
-Dependabot (`.github/dependabot.yml`) opens update pull requests once a week: NuGet packages in `Directory.Packages.props`, the .NET tools in `dotnet-tools.json`, and the actions in `.github/workflows`. Minor and patch updates come together in one pull request per ecosystem. Each major update gets its own. Titles are conventional commits (`build(deps): …`, `ci(deps): …`), so they pass the title check and stay out of the changelog. Review them like any pull request: CI must be green, and a major update needs a look at its release notes.
+The report lands in `tests/CrateEdit.Tests/StrykerOutput/<date>/reports/mutation-report.html`, which Git ignores.
 
 ## Releases and distribution
 - Releases are published on GitHub Releases, unsigned. Windows SmartScreen and macOS Gatekeeper will warn on first launch; the release notes explain how to open the app anyway.

@@ -1,4 +1,4 @@
-# Build, tests, traceability and phase exit check, formatting and a coverage report.
+# Source checks, build and tests, traceability and phase exit check, formatting and a coverage report.
 # What each job checks and what to do when it fails:
 # https://github.com/thomaswening/CrateEdit/blob/main/docs/development.md#continuous-integration
 name: CI
@@ -16,6 +16,16 @@ env:
   LAST_COMPLETED_PHASE: 1
 
 jobs:
+  source-checks:
+    name: Source checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Coding guideline: invisible characters as escapes. Lists every line with a literal one.
+      - name: No invisible characters in C# sources
+        run: |
+          if git grep -nP '(?<!^)\x{FEFF}|[\x{00A0}\x{00AD}\x{200B}-\x{200D}\x{2060}]' -- '*.cs'; then exit 1; fi
+
   build-and-test:
     name: Build and test (${{ matrix.os }})
     strategy:

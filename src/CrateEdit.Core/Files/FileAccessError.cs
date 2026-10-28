@@ -41,7 +41,8 @@ public sealed record FileAccessError(FileProblem Problem, string Path) : Error
         FileProblem.DiskFull => ErrorCodes.FilesDiskFull,
         FileProblem.VerificationFailed => ErrorCodes.FilesVerificationFailed,
         FileProblem.IoError => ErrorCodes.FilesIoError,
-        _ => throw new InvalidOperationException($"No error code for {Problem}."),
+        // Only an enum value cast from a number lands here: the error itself is invalid, not an argument.
+        _ => throw new InvalidOperationException($"Unknown {nameof(FileProblem)}: {Problem}."),
     };
 
     /// <summary>A locked file may be released soon, so retrying makes sense (<see href="https://github.com/thomaswening/CrateEdit/blob/main/docs/requirements.md#req-079">REQ-079</see>).</summary>

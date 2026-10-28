@@ -62,7 +62,7 @@ public static class LockingProcesses
         }
         finally
         {
-            // A session that cannot be ended only holds memory until the process exits; nothing to do.
+            // The list is read already. A session that fails to close changes nothing for the caller.
             _ = RmEndSession(session);
         }
     }
