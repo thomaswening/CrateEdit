@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrateEdit.Core.Results;
 
 namespace CrateEdit.Tests.Results;
@@ -14,7 +15,7 @@ public class ResultTests
     private static Result<int> Parse(string text) =>
         int.TryParse(text, out var value) ? value : new TestError();
 
-    private static string Describe(Result<int> result) => result.Match(value => value.ToString(), error => error.Code);
+    private static string Describe(Result<int> result) => result.Match(value => value.ToString(CultureInfo.InvariantCulture), error => error.Code);
 
     [Fact]
     public void Value_converts_to_a_successful_result()

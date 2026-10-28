@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Text;
 using CrateEdit.Core.Results;
@@ -228,9 +229,10 @@ internal sealed class Id3v2Tag
     /// <summary>A new, empty ID3v2.3 tag for files without one; v2.3 is read by all major DJ software.</summary>
     public static Id3v2Tag CreateEmpty() => new(new Id3v2Header(3, 0, 0, 0), [], null);
 
+    private static readonly SearchValues<byte> FrameIdCharacters = SearchValues.Create("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"u8);
+
     /// <summary>Frame ids are four characters from A-Z and 0-9, e.g. "TIT2".</summary>
-    private static bool IsValidFrameId(ReadOnlySpan<byte> id) =>
-        !id.ContainsAnyExcept("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"u8);
+    private static bool IsValidFrameId(ReadOnlySpan<byte> id) => !id.ContainsAnyExcept(FrameIdCharacters);
 }
 
 /// <summary>

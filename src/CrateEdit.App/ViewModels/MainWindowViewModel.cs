@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -23,6 +24,7 @@ public partial class MainWindowViewModel : ObservableObject
         };
     }
 
+    [SuppressMessage("Performance", "CA1822", Justification = "Bound from XAML, which needs an instance property.")]
     public string Title => AppInfo.Name;
 
     /// <summary>Handlers for registry commands, keyed by command id; used for shortcut bindings.</summary>

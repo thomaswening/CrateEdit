@@ -7,6 +7,7 @@ using CrateEdit.App;
 using CrateEdit.App.Commands;
 using CrateEdit.App.Resources;
 using CrateEdit.App.Services;
+using CrateEdit.App.Views;
 using CrateEdit.Core;
 using CrateEdit.Core.Commands;
 
@@ -30,7 +31,7 @@ public class MainWindowTests
     private static RawInputModifiers PrimaryModifier =>
         OperatingSystem.IsMacOS() ? RawInputModifiers.Meta : RawInputModifiers.Control;
 
-    private static Window ShowWindow(FakeShell shell, CommandRegistry? registry = null)
+    private static MainWindow ShowWindow(FakeShell shell, CommandRegistry? registry = null)
     {
         var window = MainWindowFactory.Create(Paths, registry ?? new CommandRegistry(AppCommands.All), shell);
         window.Show();

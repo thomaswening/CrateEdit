@@ -1,0 +1,27 @@
+# Weekly update pull requests for NuGet packages (Directory.Packages.props), the .NET tools
+# (dotnet-tools.json) and the GitHub Actions in .github/workflows.
+# How to handle them: https://github.com/thomaswening/CrateEdit/blob/main/docs/development.md#dependency-updates
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    # One pull request for all minor and patch updates; each major update gets its own.
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: build
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: ci
+      include: scope

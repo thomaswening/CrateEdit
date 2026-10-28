@@ -6,13 +6,15 @@ Draft | 9 October 2026 | Based on requirements v0.4
 - **Every phase ends with a runnable app** that does something useful, even if read-only.
 - **Open decisions are resolved just before the phase that needs them**, not all up front. The "Needs" line of each phase lists which ones.
 - **Guardrails are verified automatically on every change.** Each phase adds unit, integration and end-to-end tests for its requirements, tagged with requirement IDs; CI must pass before merging (see [development.md](development.md)).
+- **A finished phase is marked `- Status: complete (date)`** in the pull request that finishes it. CI checks every phase marked so on every change ([Completing a phase](tools/traceability.md#completing-a-phase)).
 - **Shortcuts and commands go through one registry from day one.** Many requirements say "quick action and configurable shortcut", so actions are defined once and bound to keys later, instead of retrofitting.
 
 ## Milestone 1 — Read-only collection browser
 
 ### Phase 0: Foundations
 Solution skeleton: `CrateEdit.App` (Avalonia + Material.Avalonia, CommunityToolkit.Mvvm), `CrateEdit.Core` (domain, no UI dependency), `CrateEdit.Tests`. CI on GitHub Actions building and testing on Windows and macOS. App-data location, local diagnostic logging with 30-day cleanup, command/shortcut registry with default bindings, English/German UI resources and text-matching rules, release-please and the requirements traceability report.
-- Requirements: [REQ-108](requirements.md#req-108) (groundwork), [REQ-109](requirements.md#req-109), [REQ-116](requirements.md#req-116), [REQ-117](requirements.md#req-117), [REQ-118](requirements.md#req-118), [REQ-123](requirements.md#req-123) to [REQ-129](requirements.md#req-129)
+- Status: complete (12 October 2026)
+- Requirements: [REQ-108](requirements.md#req-108) (groundwork), [REQ-109](requirements.md#req-109), [REQ-116](requirements.md#req-116), [REQ-117](requirements.md#req-117), [REQ-118](requirements.md#req-118), [REQ-123](requirements.md#req-123), [REQ-124](requirements.md#req-124), [REQ-126](requirements.md#req-126) to [REQ-129](requirements.md#req-129)
 - Needs: nothing
 
 ### Phase 1: Tag layer and write spike
@@ -23,7 +25,7 @@ Read and write the 9 logical fields on MP3 and WAV with CrateEdit's own frame-le
 
 ### Phase 2: Index, initial scan, collection table
 SQLite index in app data. Initial scan of the collection root with progress and a responsive UI. Virtualized, sortable, searchable table with configurable and persisted columns. Fast startup from the index with a loading indication. NAS warning when choosing the root. Interim playback: a quick action that opens the track in the operating system's default media player (replaced by the built-in player in Phase 10).
-- Requirements: [REQ-002](requirements.md#req-002), [REQ-005](requirements.md#req-005), [REQ-010](requirements.md#req-010), [REQ-012](requirements.md#req-012), [REQ-015](requirements.md#req-015), [REQ-016](requirements.md#req-016), [REQ-026](requirements.md#req-026), [REQ-027](requirements.md#req-027), [REQ-034](requirements.md#req-034), [REQ-035](requirements.md#req-035), [REQ-045](requirements.md#req-045)
+- Requirements: [REQ-002](requirements.md#req-002), [REQ-005](requirements.md#req-005), [REQ-010](requirements.md#req-010), [REQ-012](requirements.md#req-012), [REQ-015](requirements.md#req-015), [REQ-016](requirements.md#req-016), [REQ-026](requirements.md#req-026), [REQ-027](requirements.md#req-027), [REQ-034](requirements.md#req-034), [REQ-035](requirements.md#req-035), [REQ-045](requirements.md#req-045), [REQ-125](requirements.md#req-125) (regional formatting: Phase 0 set it up, but it can only be checked once the table shows dates and numbers)
 - Needs: [OPEN-N](requirements.md#open-n) (date added for the initial scan)
 
 ### Phase 3: Collection synchronization

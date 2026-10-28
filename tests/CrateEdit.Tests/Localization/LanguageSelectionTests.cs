@@ -4,6 +4,7 @@ using Avalonia.LogicalTree;
 using CrateEdit.App;
 using CrateEdit.App.Commands;
 using CrateEdit.App.Services;
+using CrateEdit.App.Views;
 using CrateEdit.Core;
 using CrateEdit.Core.Commands;
 
@@ -17,7 +18,7 @@ public class LanguageSelectionTests
         public Task OpenFolderAsync(string path) => Task.CompletedTask;
     }
 
-    private static Window CreateWindow() =>
+    private static MainWindow CreateWindow() =>
         MainWindowFactory.Create(new AppPaths(Path.GetTempPath()), new CommandRegistry(AppCommands.All), new NoShell());
 
     private static string FirstMenuHeader(Window window) =>
