@@ -170,6 +170,8 @@ dotnet reportgenerator -reports:TestResults/coverage.cobertura.xml -targetdir:Te
 ### Dependency updates
 Dependabot (`.github/dependabot.yml`) opens update pull requests once a week: NuGet packages in `Directory.Packages.props`, the .NET tools in `dotnet-tools.json`, and the actions in `.github/workflows`. Minor and patch updates come together in one pull request per ecosystem. Each major update gets its own. Titles are conventional commits (`build(deps): …`, `ci(deps): …`), so they pass the title check and stay out of the changelog. Review them like any pull request: CI must be green, and a major update needs a look at its release notes.
 
+Updates that cannot be merged yet are held back with an `ignore` rule in `dependabot.yml`, each with a comment saying why and when to remove it. Currently held back: xunit.v3 4.x, because Avalonia.Headless.XUnit 12.1.x is built against xunit.v3 3.x and its `[AvaloniaFact]` tests fail discovery on 4.x ([#28](https://github.com/thomaswening/CrateEdit/pull/28)).
+
 ## Tools and checks
 Three checks enforce rules of Thomas's coding guideline (the `coding-guideline` skill in [claude-config](https://github.com/thomaswening/claude-config), "Automated checks" in its C# reference). Rules without a check stay on the review checklist.
 
