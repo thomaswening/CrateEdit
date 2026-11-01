@@ -14,6 +14,11 @@ updates:
     commit-message:
       prefix: build
       include: scope
+    ignore:
+      # Avalonia.Headless.XUnit 12.1.x is built against xunit.v3 3.x and fails test discovery on 4.x
+      # (MissingMethodException, see #28). Remove once Avalonia ships a release for xunit.v3 4.
+      - dependency-name: xunit.v3
+        versions: [">= 4.0.0"]
 
   - package-ecosystem: github-actions
     directory: /
